@@ -1546,7 +1546,7 @@ int main(int argc, char **argv) {
 		stop_time = 50000000;
 	}
 
-	move = NEGABTIME(color, position, stop_time);
+	// move = NEGABTIME(color, position, stop_time);
 
 	/*
 	if (time > 60) {
@@ -1562,7 +1562,7 @@ int main(int argc, char **argv) {
 		move = NEG4AB(color, position);
 	}
 	//  newmove move = LLIN5AB(color, field);*/
-	std::cout << from_code(move);
+	// std::cout << from_code(move);
 
 	return 0;
 }
