@@ -1428,6 +1428,7 @@ int main(int argc, char **argv) {
 	for (int i = 0; i <= 1; ++i) {
 		for (int j = 0; j < 6; ++j) position.pieces[i][j] = 0;
 	}
+	/*
 	for (int i = 0; i < fen.size(); ++i) {
 		int to = (y - 1) * 8 + x;
 		if (fen[i] == ' ') {
@@ -1507,7 +1508,8 @@ int main(int argc, char **argv) {
 		else {
 			x += (fen[i] - '0');
 		}
-	}
+	}*/
+
 	// std::cout << argc << '\n';
 	// std::cout << argv[1] << '\n';
 	//  color = (std::string(argv[2]) == "w" ? 1 : -1);
@@ -1519,9 +1521,9 @@ int main(int argc, char **argv) {
 		}
 		cout << '\n';
 	}*/
-	position.Update(Color::WHITE);
-	position.Update(Color::BLACK);
-	position.hash_.init(position);
+	//position.Update(Color::WHITE);
+	//position.Update(Color::BLACK);
+	//position.hash_.init(position);
 	int time = atoi(argv[2]);
 
 
