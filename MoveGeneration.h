@@ -504,7 +504,7 @@ std::vector<Move> GetAllMoves(Position& position, int color, bool captures = fal
 		MaskToMove(position, moves, move_mask, x, Piece::KING, color);
 	}
 
-	
+	/*
 	if (color == Color::WHITE) {
 		if (position.white_short_castling) {
 			if (!IsUnderAttack(position, 4, color) && !IsUnderAttack(position, 5, color) &&
@@ -514,7 +514,7 @@ std::vector<Move> GetAllMoves(Position& position, int color, bool captures = fal
 				moves.push_back(move);
 			}
 		}
-	}
+	}*/
 
 	return moves;
 }

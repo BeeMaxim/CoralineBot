@@ -1515,16 +1515,16 @@ int main(int argc, char **argv) {
 
 	time_t stop_time;
 	if (time > 60) {
-		stop_time = 5000000000;
+		stop_time = 500000000;
 	}
 	else if (time > 25) {
-		stop_time = 3000000000;
+		stop_time = 300000000;
 	}
 	else if (time > 5) {
-		stop_time = 1000000000;
+		stop_time = 100000000;
 	}
 	else {
-		stop_time = 500000000;
+		stop_time = 50000000;
 	}
 
 	move = NEGABTIME(color, position, stop_time);
