@@ -1541,7 +1541,7 @@ int main(int argc, char **argv) {
 		stop_time = 100000000;
 	}
 	else {
-		stop_time = 500000;
+		stop_time = 5000000;
 	}
 
 	move = NEGABTIME(color, position, stop_time);
