@@ -239,6 +239,7 @@ pair<Move, int> LINAB(int deep, int color, Position& position, ZobristHash hash_
 		}*/
 		// if (position.GetAll() & (1LLu << a.to)) return 1;
 		// if (position.GetAll() & (1LLu << b.to)) return 0;
+		std::cout << "HA!\n";
 		if (a.defend_type == -1 && b.defend_type == -1) {
 			int a_type = -1;
 			int b_type = -1;
@@ -283,7 +284,7 @@ pair<Move, int> LINAB(int deep, int color, Position& position, ZobristHash hash_
 		
 		return (abs(field[a.newX][a.newY]) > abs(field[b.newX][b.newY]));*/
 	};
-	sort(result.begin(), result.end(), key);
+	std::sort(result.begin(), result.end(), key);
 	for (auto& i : result) {
 		int attack_type = i.attack_type;
 		int defend_type = i.defend_type;
@@ -389,7 +390,7 @@ int CaptureNEGAB(int color, Position& position, int alpha, int beta) {
 		//return (a.attack_type - a.defend_type < b.attack_type - b.defend_type);
 	};
 
-	sort(result.begin(), result.end(), key);
+	std::sort(result.begin(), result.end(), key);
 
 	int index = 0;
 
@@ -462,9 +463,9 @@ int InnerNEGAB(int deep, int color, Position position, int alpha, int beta, int 
 		return 0;
 	}
 
-	auto start = std::chrono::high_resolution_clock::now();
+	// auto start = std::chrono::high_resolution_clock::now();
 	vector<Move> result = GetAllMoves(position, color);
-	auto finish = std::chrono::high_resolution_clock::now();
+	// auto finish = std::chrono::high_resolution_clock::now();
     //TIMER += std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count();
 	
 	int cost = -10000 - deep;
@@ -492,12 +493,17 @@ int InnerNEGAB(int deep, int color, Position position, int alpha, int beta, int 
 		cout << u.from << ' ' << u.to << ' ' << u.attack_type << ' ' << u.defend_type << endl;
 	}*/
 	
-
 	auto key = [&position, &color, &in_check, &ply](Move& a, Move& b) -> bool {
-		if (in_check && a.attack_type == Piece::KING) return 1;
-		if (in_check && b.attack_type == Piece::KING) return 0;
-		if (a.special == 5) return 1;
-		if (b.special == 5) return 0;
+		if (in_check) {
+			if (a.attack_type == Piece::KING && b.attack_type == Piece::KING) return 0;
+			if (a.attack_type == Piece::KING) return 1;
+			return 0;
+		}
+		//if (in_check && a.attack_type == Piece::KING) return 1;
+		//if (in_check && b.attack_type == Piece::KING) return 0;
+		//return 0;
+		// if (a.special == 5) return 1;
+		// if (b.special == 5) return 0;
 		if (a.defend_type == -1 && b.defend_type == -1) {
 			//if (a == killers[ply]) return 1;
 			//if (b == killers[ply]) return 0;
@@ -522,6 +528,7 @@ int InnerNEGAB(int deep, int color, Position position, int alpha, int beta, int 
 			int x = a.to / 8;
 			int y = a.to % 8;
 			int dir = (color ? -1 : 1);
+			/*
 			for (int i = -1; i <= 1; i += 2) {
 				if (x + dir >= 0 && x + dir < 8 && y + i >= 0 && y + i < 8) {
 					int next = (x + dir) * 8 + y + i;
@@ -539,7 +546,8 @@ int InnerNEGAB(int deep, int color, Position position, int alpha, int beta, int 
 						b_type = b.attack_type;
 					}
 				}
-			}
+			}*/
+
 			// cout << '!' << ' ' << a_type << ' ' << b_type << endl;
 			// Position cop1 = position, cop2 = position;
 			// cop1.Do(a, color);
@@ -563,7 +571,9 @@ int InnerNEGAB(int deep, int color, Position position, int alpha, int beta, int 
 	};
 
 	// auto start = std::chrono::high_resolution_clock::now();
-	sort(result.begin(), result.end(), key);
+	// std::cout << "before sort\n";
+	std::sort(result.begin(), result.end(), key);
+	// std::cout << "after sort\n";
 	// auto finish = std::chrono::high_resolution_clock::now();
     // TIMER += std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count() ;
 
@@ -800,12 +810,15 @@ pair<Move, int> NEGAB(int deep, int color, Position position, int alpha, int bet
 	vector<Move> to_ch(0);
 
 	bool in_check = !IsLegalPosition(position, color);
-
+	// std::cout << deep << ' ' << alpha << ' '<< beta << '\n';
 	auto key = [&position, &color, &in_check](Move& a, Move& b) -> bool {
-		if (in_check && a.attack_type == Piece::KING) return 1;
-		if (in_check && b.attack_type == Piece::KING) return 0;
-		if (a.special == 5) return 1;
-		if (b.special == 5) return 0;
+		if (in_check) {
+			if (a.attack_type == Piece::KING && b.attack_type == Piece::KING) return 0;
+			if (a.attack_type == Piece::KING) return 1;
+			return 0;
+		}
+		// if (a.special == 5) return 1;
+		// if (b.special == 5) return 0;
 		if (a.defend_type == -1 && b.defend_type == -1) {
 			// int mob_a = mobile[a.attack_type] * (count_1(GeneratePseudoMove(position, a.to, color, a.attack_type)) - count_1(GeneratePseudoMove(position, a.from, color, a.attack_type)));
 			// int mob_b = mobile[b.attack_type] * (count_1(GeneratePseudoMove(position, b.to, color, b.attack_type)) - count_1(GeneratePseudoMove(position, b.from, color, b.attack_type)));
@@ -869,7 +882,8 @@ pair<Move, int> NEGAB(int deep, int color, Position position, int alpha, int bet
 	};
 
 
-	sort(result.begin(), result.end(), key);
+	std::sort(result.begin(), result.end(), key);
+	// std::cout << "after result\n";
 	
 	auto ptr = cash.find(position.hash_);
 
@@ -887,11 +901,14 @@ pair<Move, int> NEGAB(int deep, int color, Position position, int alpha, int bet
 	bool first = false;
 	int score;
 
+	// std::cout << "before best_move\n";
+
 	if (best_move != -1) {
 		Position copy = position;
 		copy.Do(result[best_move], color);
 
 		score = -InnerNEGAB(deep - 1, color ^ 1, copy, -beta, -alpha, 1);
+		// std::cout << "score " << score << '\n';
 
 		if (score > cost) {
 			to_ch.push_back(result[best_move]);
@@ -1520,7 +1537,7 @@ int main(int argc, char **argv) {
 	else if (time > 25) {
 		stop_time = 300000000;
 	}
-	else if (time > 5) {
+	else if (time > 3) {
 		stop_time = 100000000;
 	}
 	else {
