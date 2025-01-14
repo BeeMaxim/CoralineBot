@@ -430,7 +430,7 @@ void MaskToMove(Position& position, std::vector<Move>& result, BitBoard mask, in
 				// result.push_back(move);
 				for (int i = 1; i <= 4; ++i) {
 					move.special = i;
-					result.push_back(move);
+					//result.push_back(move);
 				}
 			}
 			else {
