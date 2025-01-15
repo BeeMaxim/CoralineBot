@@ -91,6 +91,14 @@ int distance(int p1, int p2) {
 
 unordered_map<uint64_t, int> static_cash;
 
+int MAX_STATIC_CASH_SIZE = 100000;
+
+void ReplaceInStaticCash() {
+	if (static_cash.size() > MAX_STATIC_CASH_SIZE) {
+		static_cash.erase(static_cash.begin());
+	}
+}
+
 int mobile[5] = {0, 8, 4, 2, 2};
 
 int marker(Position& position) {
@@ -157,6 +165,7 @@ int marker(Position& position) {
 
 		// mask = position.pieces[color][0];
 	}
+	ReplaceInStaticCash();
 	static_cash[position.hash_.hash] = result;
 
 	return result;
@@ -415,6 +424,17 @@ int EXACT = 0;
 
 Move killers[1001];
 
+
+int MAX_CASH_SIZE = 100000;
+
+
+void ReplaceInCash() {
+	if (cash.size() > MAX_CASH_SIZE) {
+		cash.erase(cash.begin());
+	}
+}
+
+
 int InnerNEGAB(int deep, int color, Position position, int alpha, int beta, int ply) {
 	
 	if (STOP) return 0;
@@ -526,7 +546,7 @@ int InnerNEGAB(int deep, int color, Position position, int alpha, int beta, int 
 			int x = a.to / 8;
 			int y = a.to % 8;
 			int dir = (color ? -1 : 1);
-			/*
+			
 			for (int i = -1; i <= 1; i += 2) {
 				if (x + dir >= 0 && x + dir < 8 && y + i >= 0 && y + i < 8) {
 					int next = (x + dir) * 8 + y + i;
@@ -544,7 +564,7 @@ int InnerNEGAB(int deep, int color, Position position, int alpha, int beta, int 
 						b_type = b.attack_type;
 					}
 				}
-			}*/
+			}
 
 			// cout << '!' << ' ' << a_type << ' ' << b_type << endl;
 			// Position cop1 = position, cop2 = position;
@@ -574,7 +594,7 @@ int InnerNEGAB(int deep, int color, Position position, int alpha, int beta, int 
 	// std::cout << "after sort\n";
 	// auto finish = std::chrono::high_resolution_clock::now();
     // TIMER += std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count() ;
-
+	ReplaceInCash();
 	auto ptr = cash.find(position.hash_);
 	int best_move = -1;
 	// cout << cash.size() << endl;
@@ -617,11 +637,11 @@ int InnerNEGAB(int deep, int color, Position position, int alpha, int beta, int 
 	}
 
 	int R = 3;
-	
+	/*
 	if (!in_check &&  ply > 1 && -InnerNEGAB(deep - deep / 6 - R - 1, color ^ 1, position, -beta, -alpha, ply + 1) >= beta) { // null move
 		history.pop_back();
 		return beta; 
-	}
+	}*/
 
 	if (deep <= 2 && !in_check) {
 		int margin = 50;
@@ -887,7 +907,7 @@ pair<Move, int> NEGAB(int deep, int color, Position position, int alpha, int bet
 
 	int best_move = -1;
 
-	
+	ReplaceInCash();
 	if (ptr != cash.end()) {
 		if (ptr->second.index < result.size()) {
 			// cout << ptr->second << endl;
@@ -1380,7 +1400,7 @@ int main(int argc, char **argv) {
 			std::getline(std::cin, fen);
 			std::getline(std::cin, str_time);
 
-			static_cash.clear();
+			// static_cash.clear();
 
 			for (int i = 0; i < 1001; ++i) killers[i] = {0, 0, 0, 0};
 			mark_tables[1] = {
