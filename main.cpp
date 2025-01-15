@@ -1093,7 +1093,6 @@ Move NEGABTIME(int color, Position& position, time_t stop_time) {
 	time_t start = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 	// time_t stop_time = 2000000000;
 	Move move = GetAllMoves(position, color)[0];
-	return move;
 	
 	for (int32_t deep = 1; deep < 1000; ++deep) {
 		int alpha = -100000, beta = 100000;
