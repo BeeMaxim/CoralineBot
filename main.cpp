@@ -1376,8 +1376,9 @@ Position FromFen(string fen) {
 int main(int argc, char **argv) {
 	if (argc == 2 && std::string(argv[1]) == "ping-ping") {
 		while (1) {
-			std::string fen; 
+			std::string fen; std::string str_time;
 			std::getline(std::cin, fen);
+			std::getline(std::cin, str_time);
 
 			static_cash.clear();
 
@@ -1471,7 +1472,7 @@ int main(int argc, char **argv) {
 
 			Move move = {0, 0, 0, 0};
 
-			int time = 1;
+			int time = atoi(str_time.c_str());
 
 			time_t stop_time;
 			if (time > 60) {
@@ -1481,7 +1482,7 @@ int main(int argc, char **argv) {
 				stop_time = 300000000;
 			}
 			else if (time > 3) {
-				stop_time = 100000000;
+				stop_time = 200000000;
 			}
 			else {
 				stop_time = 50000000;
