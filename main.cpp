@@ -1377,7 +1377,15 @@ Position FromFen(string fen) {
 }
 
 int main(int argc, char **argv) {
-	return 0;
+	if (argc == 2 && std::string(argv[1]) == "ping-ping") {
+		while (1) {
+			std::string fen; 
+			std::getline(std::cin, fen);
+			std::cout << 0 << '\n';
+			std::cout.flush();
+		}
+		return 0;
+	}
 	for (int i = 0; i < 1001; ++i) killers[i] = {0, 0, 0, 0};
 	mark_tables[1] = {
 		{0, 0, 0, 0, 0, 0, 0, 0, 0},
