@@ -102,7 +102,7 @@ void ReplaceInStaticCash() {
 int mobile[5] = {0, 8, 4, 2, 2};
 
 int marker(Position& position) {
-	auto start = std::chrono::high_resolution_clock::now();
+	// auto start = std::chrono::high_resolution_clock::now();
 	
 	auto it = static_cash.find(position.hash_.hash);
 	
@@ -136,7 +136,8 @@ int marker(Position& position) {
 			}
 		}
 
-		auto start = std::chrono::high_resolution_clock::now();
+		//auto start = std::chrono::high_resolution_clock::now();
+		
 		BitBoard mask = position.pieces[color][0];
 		while (mask) {
 			int p = bsf(mask);
@@ -145,12 +146,12 @@ int marker(Position& position) {
 			else result -= PAWN_POSITIONS[63 - p];
 		}
 
-		auto finish = std::chrono::high_resolution_clock::now();
-    	TIMER += std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count();
-		
+		//auto finish = std::chrono::high_resolution_clock::now();
+    	//TIMER += std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count();
+		/*
 		if (!position.white_castling_happened && !position.white_short_castling) {
 			result -= 40;
-		}
+		}*/
 		mask = position.pieces[color][Piece::KING];
 		if (count_1(position.GetAll()) > 11) {		
 			result += dir * KING_POSITIONS[bsf(mask)];
@@ -161,7 +162,7 @@ int marker(Position& position) {
 		// int queen = bsf(position.pieces[color][Piece::QUEEN]);
 		// int king = bsf(position.pieces[color ^ 1][Piece::KING]);
 
-		if (position.pieces[color][Piece::QUEEN]) result += -4 * dir * distance(mains[color][0], mains[color ^ 1][1]);
+		// if (position.pieces[color][Piece::QUEEN]) result += -4 * dir * distance(mains[color][0], mains[color ^ 1][1]);
 
 		// mask = position.pieces[color][0];
 	}
@@ -221,160 +222,6 @@ bool Is3Times() {
 	return 0;
 }
 
-pair<Move, int> LINAB(int deep, int color, Position& position, ZobristHash hash_, int alpha, int beta) {
-	if (deep == 0) {
-		return { { 0, 0, 0, 0 }, marker(position) };
-	}
-	/*
-	auto u = cash.find(hash_);
-	if (u != cash.end() && u->second.first > deep && u->second.first % 2 == deep % 2) {
-		return u->second.second;
-	}*/
-
-	vector<Move> result = GetAllMoves(position, color);
-	Move chMove = { 0, 0, 0, 0 }; int cost = -10000 - deep;
-	if (color) cost = 10000 + deep;
-	vector<Move> to_ch(0);
-	
-	auto key = [&position, &color](Move& a, Move& b) -> bool {
-		/*
-		if (field[a.newX][a.newY] == 0 && field[b.newX][b.newY] == 0) {
-			if (field[a.newX + color][a.newY - 1] == -color || field[a.newX + color][a.newY + 1] == -color) {
-				return 0;
-			}
-			return 1;
-		}*/
-		// if (position.GetAll() & (1LLu << a.to)) return 1;
-		// if (position.GetAll() & (1LLu << b.to)) return 0;
-		std::cout << "HA!\n";
-		if (a.defend_type == -1 && b.defend_type == -1) {
-			int a_type = -1;
-			int b_type = -1;
-			int x = a.to / 8;
-			int y = a.to % 8;
-			int dir = (color ? -1 : 1);
-			for (int i = -1; i <= 1; i += 2) {
-				if (x + dir >= 0 && x + dir < 8 && y + i >= 0 && y + i < 8) {
-					int next = (x + dir) * 8 + y + i;
-					if (position.pieces[color ^ 1][Piece::PAWN] & (1LLu << next)) {
-						a_type = a.attack_type;
-						// return 0;
-					}
-				}
-			}
-			// return 1;
-			x = b.to / 8;
-			y = b.to % 8;
-			for (int i = -1; i <= 1; i += 2) {
-				if (x + dir >= 0 && x + dir < 8 && y + i >= 0 && y + i < 8) {
-					int next = (x + dir) * 8 + y + i;
-					if (position.pieces[color ^ 1][Piece::PAWN] & (1LLu << next)) {
-						b_type = b.attack_type;
-					}
-				}
-			}
-			return a_type <= b_type;
-			
-		}
-		if (a.defend_type == -1) return 0;
-		if (b.defend_type == -1) return 1;
-		return (a.attack_type - a.defend_type < b.attack_type - b.defend_type);
-		/*
-		if (a.defend_type == b.defend_type) {
-			return (a.attack_type < b.attack_type);
-		}
-		return (a.defend_type > b.defend_type);*/
-		/*
-		if (abs(field[a.newX][a.newY]) == abs(field[b.newX][b.newY])) {
-			return (abs(field[a.oldX][a.oldY]) < abs(field[b.oldX][b.oldY]));
-		}
-		
-		return (abs(field[a.newX][a.newY]) > abs(field[b.newX][b.newY]));*/
-	};
-	std::sort(result.begin(), result.end(), key);
-	for (auto& i : result) {
-		int attack_type = i.attack_type;
-		int defend_type = i.defend_type;
-		/*for (int u = 0; u < 6; ++u) {
-			if (position.pieces[color ^ 1][u] & (1LLu << i.to)) defend_type = u;
-		}*/
-		/*
-		set_0(position.pieces[color][i.attack_type], i.from);
-		hash_.invert_piece(i.from, i.attack_type, color);
-		set_1(position.pieces[color][i.attack_type], i.to);
-		hash_.invert_piece(i.to, i.attack_type, color);
-		if (defend_type != -1) {
-			set_0(position.pieces[color ^ 1][defend_type], i.to);
-			hash_.invert_piece(i.to, defend_type, color ^ 1);
-		}*/
-		position.Do(i, color);
-
-		auto p = LINAB(deep - 1, color ^ 1, position, hash_, alpha, beta);
-		if (color == 0 && p.second > beta) {
-			/*
-			set_1(position.pieces[color][i.attack_type], i.from);
-			set_0(position.pieces[color][i.attack_type], i.to);
-			if (defend_type != -1) {
-				set_1(position.pieces[color ^ 1][defend_type], i.to);
-			}*/
-			position.UnDo(i, color);
-			// cash[hash_] = { deep, {i, p.second} };
-			return { i, p.second };
-		}
-		else if (color == 0) alpha = max(alpha, p.second);
-		if (color == 1 && p.second < alpha) {
-			/*
-			set_1(position.pieces[color][i.attack_type], i.from);
-			hash_.invert_piece(i.from, i.attack_type, color);
-			set_0(position.pieces[color][i.attack_type], i.to);
-			hash_.invert_piece(i.to, i.attack_type, color);
-			if (defend_type != -1) {
-				set_1(position.pieces[color ^ 1][defend_type], i.to);
-				hash_.invert_piece(i.to, defend_type, color ^ 1);
-			}*/
-			position.UnDo(i, color);
-			// cash[hash_] = { deep, {i, p.second} };
-			return { i, p.second };
-		}
-		else if (color == 1) beta = min(beta, p.second);
-		if (color == 0 && p.second > cost) {
-			cost = p.second; to_ch.clear(); to_ch.push_back(i);
-		}
-		else if (color == 0 && p.second == cost) to_ch.push_back(i);
-		if (color == 1 && p.second < cost) {
-			cost = p.second; to_ch.clear(); to_ch.push_back(i);
-		}
-		else if (color == 1 && p.second == cost) to_ch.push_back(i);
-		/*
-		set_1(position.pieces[color][i.attack_type], i.from);
-		hash_.invert_piece(i.from, i.attack_type, color);
-		set_0(position.pieces[color][i.attack_type], i.to);
-		hash_.invert_piece(i.to, i.attack_type, color);
-		if (defend_type != -1) {
-			set_1(position.pieces[color ^ 1][defend_type], i.to);
-			hash_.invert_piece(i.to, defend_type, color ^ 1);
-		}*/
-		position.UnDo(i, color);
-	}
-	// rng = std::default_random_engine{};
-
-	shuffle(to_ch.begin(), to_ch.end(), g);
-	/*
-	shuffle(to_ch.begin(), to_ch.end());
-	cout << "IN MOVE GENERATION! " << to_ch.size() << ' '<< "COST " << cost << endl;
-	// cout << "WET " << result[0].from << ' ' << result[0].to << ' ' << "LOL" << endl;
-	for (auto i : result) {
-		cout << from_code(i) << endl;
-	}*/
-	if (to_ch.empty()) {
-		if (IsLegalPosition(position, color)) {
-			return { { 0, 0, 0, 0 }, 0 };
-		}
-		return { { 0, 0, 0, 0 }, cost };
-	}
-	// cash[hash_] = { deep, { to_ch[0], cost } };
-	return { to_ch[0], cost };
-}
 
 int CASHES = 0;
 unordered_map<ZobristHash, Ent> captures_cash;
@@ -399,7 +246,7 @@ int CaptureNEGAB(int color, Position& position, int alpha, int beta) {
 
 	std::sort(result.begin(), result.end(), key);
 
-	int index = 0;
+	// int index = 0;
 
 	for (auto& move : result) {
 		// if (move.defend_type == -1) break;
@@ -414,7 +261,7 @@ int CaptureNEGAB(int color, Position& position, int alpha, int beta) {
 		alpha = max(alpha, score);
 
 		if (alpha >= beta) break;
-		index += 1;
+		// index += 1;
 	}
 
 	return alpha;
@@ -439,34 +286,7 @@ int InnerNEGAB(int deep, int color, Position position, int alpha, int beta, int 
 	
 	if (STOP) return 0;
 	if (deep <= 0) {
-		//auto ptr = cash.find(position.hash_);
-		/**
-		if (ptr != cash.end() && color == ptr->second.color && ptr->second.deep >= 0 && ptr->second.info) {
-			int info = ptr->second.info;
-			int sc = ptr->second.score;
-			if (info == 1) {
-				++CASHES;
-				// history.pop_back();
-				return sc;
-			}
-			else if (info == 2 && sc <= alpha) {
-				++CASHES;
-				// history.pop_back();
-				return alpha;
-			}
-			else if (info == 4 && sc >= beta) {
-				++CASHES;
-				// history.pop_back();
-				return beta;
-			}
-		}*/
 		int score = CaptureNEGAB(color, position, alpha, beta);
-		/*
-		if (ptr == cash.end()) {
-			//cash[position.hash_].score = score;
-			//cash[position.hash_].deep = 0;
-			//cash[position.hash_].info = 1;
-		}*/
 
 		return score;
 	}
@@ -481,10 +301,46 @@ int InnerNEGAB(int deep, int color, Position position, int alpha, int beta, int 
 		return 0;
 	}
 
+	ReplaceInCash();
+	auto ptr = cash.find(position.hash_);
+	int best_move = -1;
+	if (ptr != cash.end()) {
+		int info = ptr->second.info;
+		int sc = ptr->second.score;
+	
+		if (info && ptr->second.deep >= deep && ptr->second.color == color) {
+			++CASHES;
+			// cout << deep << ' ' << ptr->second.deep << '\n';
+			// cout << "!!!\n" << ptr->second.score << '\n';
+			
+			if (info == 4 && info == 1) {
+				//alpha = max(alpha, sc);
+			}
+			if (info == 1) {
+				history.pop_back();
+				return sc;
+			}
+			else if (info == 2 && sc <= alpha) {
+				history.pop_back();
+				return alpha;
+			}
+			else if (info == 4 && sc >= beta) {
+				// ++CASHES;
+				history.pop_back();
+				return beta;
+			}
+			// else if (info == 4) alpha = max(alpha, sc);
+		}
+		// ++CASHES;
+		// return 0;
+		// cout << "???\n";
+		best_move = ptr->second.index;
+	}
+
 	// auto start = std::chrono::high_resolution_clock::now();
 	vector<Move> result = GetAllMoves(position, color);
-	// auto finish = std::chrono::high_resolution_clock::now();
-    //TIMER += std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count();
+
+	if (best_move >= result.size()) best_move = -1;
 	
 	int cost = -10000 - deep;
 
@@ -502,14 +358,6 @@ int InnerNEGAB(int deep, int color, Position position, int alpha, int beta, int 
 		history.pop_back();
 		return beta; 
 	}*/
-
-
-	
-	// cout << deep << endl;
-	/*
-	for (auto u : result) {
-		cout << u.from << ' ' << u.to << ' ' << u.attack_type << ' ' << u.defend_type << endl;
-	}*/
 	
 	auto key = [&position, &color, &in_check, &ply](Move& a, Move& b) -> bool {
 		if (in_check) {
@@ -517,11 +365,6 @@ int InnerNEGAB(int deep, int color, Position position, int alpha, int beta, int 
 			if (a.attack_type == Piece::KING) return 1;
 			return 0;
 		}
-		//if (in_check && a.attack_type == Piece::KING) return 1;
-		//if (in_check && b.attack_type == Piece::KING) return 0;
-		//return 0;
-		// if (a.special == 5) return 1;
-		// if (b.special == 5) return 0;
 		if (a.defend_type == -1 && b.defend_type == -1) {
 			//if (a == killers[ply]) return 1;
 			//if (b == killers[ply]) return 0;
@@ -594,55 +437,13 @@ int InnerNEGAB(int deep, int color, Position position, int alpha, int beta, int 
 	// std::cout << "after sort\n";
 	// auto finish = std::chrono::high_resolution_clock::now();
     // TIMER += std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count() ;
-	ReplaceInCash();
-	auto ptr = cash.find(position.hash_);
-	int best_move = -1;
-	// cout << cash.size() << endl;
-	if (ptr != cash.end()) {
-		int info = ptr->second.info;
-		int sc = ptr->second.score;
-	
-		if (info && ptr->second.deep >= deep && ptr->second.color == color) {
-			// ++CASHES;
-			// cout << deep << ' ' << ptr->second.deep << '\n';
-			// cout << "!!!\n" << ptr->second.score << '\n';
-			
-			if (info == 4 && info == 1) {
-				//alpha = max(alpha, sc);
-			}
-			if (info == 1) {
-				history.pop_back();
-				return sc;
-			}
-			else if (info == 2 && sc <= alpha) {
-				history.pop_back();
-				return alpha;
-			}
-			else if (info == 4 && sc >= beta) {
-				// ++CASHES;
-				history.pop_back();
-				return beta;
-			}
-			// else if (info == 4) alpha = max(alpha, sc);
-		}
-		// ++CASHES;
-		// return 0;
-		// cout << "???\n";
-		if (ptr->second.index < result.size()) {
-			// cout << ptr->second << endl;
-			// swap(result[0], result[1]);
-			//swap(result[0], result[ptr->second.index]);
-			best_move = ptr->second.index;
-		}
-	}
-
 	int R = 3;
-	/*
+	
 	if (!in_check &&  ply > 1 && -InnerNEGAB(deep - deep / 6 - R - 1, color ^ 1, position, -beta, -alpha, ply + 1) >= beta) { // null move
 		history.pop_back();
 		return beta; 
-	}*/
-
+	}
+	
 	if (deep <= 2 && !in_check) {
 		int margin = 50;
 		int static_score = marker(position);
@@ -859,6 +660,7 @@ pair<Move, int> NEGAB(int deep, int color, Position position, int alpha, int bet
 			int x = a.to / 8;
 			int y = a.to % 8;
 			int dir = (color ? -1 : 1);
+			
 			for (int i = -1; i <= 1; i += 2) {
 				if (x + dir >= 0 && x + dir < 8 && y + i >= 0 && y + i < 8) {
 					int next = (x + dir) * 8 + y + i;
@@ -1011,40 +813,6 @@ pair<Move, int> NEGAB(int deep, int color, Position position, int alpha, int bet
 	return { to_ch[0], cost };
 }
 
-Move LLIN1AB(int color, Position& position) {
-	int alpha = -100000, beta = 100000;
-	ZobristHash hash_;
-	hash_.init(position);
-	return LINAB(1, color, position, hash_, alpha, beta).first;
-}
-
-Move LLIN4AB(int color, Position& position) {
-	int alpha = -100000, beta = 100000;
-	ZobristHash hash_;
-	hash_.init(position);
-	return LINAB(4, color, position, hash_, alpha, beta).first;
-}
-
-Move LLIN5AB(int color, Position& position) {
-	int alpha = -100000, beta = 100000;
-	ZobristHash hash_;
-	hash_.init(position);
-	return LINAB(5, color, position, hash_, alpha, beta).first;
-}
-
-Move LLIN6AB(int color, Position& position) {
-	int alpha = -100000, beta = 100000;
-	ZobristHash hash_;
-	hash_.init(position);
-	return LINAB(6, color, position, hash_, alpha, beta).first;
-}
-
-Move LLIN7AB(int color, Position& position) {
-	int alpha = -100000, beta = 100000;
-	ZobristHash hash_;
-	hash_.init(position);
-	return LINAB(7, color, position, hash_, alpha, beta).first;
-}
 
 Move NEG2AB(int color, Position& position) {
 	int alpha = -100000, beta = 100000;
@@ -1079,7 +847,7 @@ Move NEGABTIME_test(int color, Position& position) {
 	COUNTER = 0;
 	CASHES = 0;
 	EXACT = 0;
-	for (int32_t deep = 1; deep < 4; ++deep) {
+	for (int32_t deep = 1; deep < 7; ++deep) {
 		cout << "------------------------DEEP: " << deep << "-----------------------------\n";
 		int alpha = -100000, beta = 100000;
 		std::future<pair<Move, int>> thread = std::async(NEGAB, deep, color, copy, alpha, beta);
