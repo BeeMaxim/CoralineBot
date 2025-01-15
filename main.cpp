@@ -1381,11 +1381,126 @@ int main(int argc, char **argv) {
 		while (1) {
 			std::string fen; 
 			std::getline(std::cin, fen);
-			std::cout << 0 << '\n';
+
+			for (int i = 0; i < 1001; ++i) killers[i] = {0, 0, 0, 0};
+			mark_tables[1] = {
+				{0, 0, 0, 0, 0, 0, 0, 0, 0},
+				{0, 1, 1, 1, 1, 1, 1, 1, 1},
+				{0, 1, 1, 1, 1, 1, 1, 1, 1},
+				{0, 1, 1, 1.25, 1.25, 1.25, 1.25, 1, 1},
+				{0, 1, 1, 1.25, 1.5, 1.5, 1.25, 1, 1},
+				{0, 1, 1, 1.25, 1.5, 1.5, 1.25, 1, 1},
+				{0, 1, 1, 1.25, 1.25, 1.25, 1.25, 1, 1},
+				{0, 1, 1, 1, 1, 1, 1, 1, 1},
+				{0, 1, 1, 1, 1, 1, 1, 1, 1},
+			};
+
+			int y = 8;
+			int x = 0;
+			int color = 3;
+
+			Position position;
+
+			for (int i = 0; i <= 1; ++i) {
+				for (int j = 0; j < 6; ++j) position.pieces[i][j] = 0;
+			}
+			for (int i = 0; i < fen.size(); ++i) {
+				int to = (y - 1) * 8 + x;
+				if (fen[i] == ' ') {
+					if (fen[i + 1] == 'w') color = 0;
+					else color = 1;
+					if (fen[i + 3] == '-') position.white_short_castling = false;
+					if (fen[i + 4] == '-') position.white_long_castling = false;
+					break;
+				}
+				if (fen[i] == 'r') {
+					set_1(position.pieces[1][Piece::ROOK], to);
+					x += 1;
+				}
+				else if (fen[i] == 'R') {
+					set_1(position.pieces[0][Piece::ROOK], to);
+					x += 1;
+				}
+				else if (fen[i] == 'n') {
+					set_1(position.pieces[1][Piece::KNIGHT], to);
+					x += 1;
+				}
+				else if (fen[i] == 'N') {
+					set_1(position.pieces[0][Piece::KNIGHT], to);
+					x += 1;
+				}
+				else if (fen[i] == 'b') {
+					set_1(position.pieces[1][Piece::BISHOP], to);
+					x += 1;
+				}
+				else if (fen[i] == 'B') {
+					set_1(position.pieces[0][Piece::BISHOP], to);
+					x += 1;
+				}
+				else if (fen[i] == 'q') {
+					set_1(position.pieces[1][Piece::QUEEN], to);
+					x += 1;
+				}
+				else if (fen[i] == 'Q') {
+					set_1(position.pieces[0][Piece::QUEEN], to);
+					x += 1;
+				}
+				else if (fen[i] == 'k') {
+					set_1(position.pieces[1][Piece::KING], to);
+					x += 1;
+				}
+				else if (fen[i] == 'K') {
+					set_1(position.pieces[0][Piece::KING], to);
+					x += 1;
+				}
+				else if (fen[i] == 'p') {
+					set_1(position.pieces[1][Piece::PAWN], to);
+					x += 1;
+				}
+				else if (fen[i] == 'P') {
+					set_1(position.pieces[0][Piece::PAWN], to);
+					x += 1;
+				}
+				else if (fen[i] == '/') {
+					y -= 1;
+					x = 0;
+				}
+				else {
+					x += (fen[i] - '0');
+				}
+			}
+
+			Move move = {0, 0, 0, 0};
+
+			int time = 1;
+
+			time_t stop_time;
+			if (time > 60) {
+				stop_time = 500000000;
+			}
+			else if (time > 25) {
+				stop_time = 300000000;
+			}
+			else if (time > 3) {
+				stop_time = 100000000;
+			}
+			else {
+				stop_time = 50000000;
+			}
+			
+			position.Update(Color::WHITE);
+			position.Update(Color::BLACK);
+			position.hash_.init(position);
+
+			move = NEGABTIME(color, position, stop_time);
+
+
+			std::cout << from_code(move) << std::endl;
 			std::cout.flush();
 		}
 		return 0;
 	}
+
 	for (int i = 0; i < 1001; ++i) killers[i] = {0, 0, 0, 0};
 	mark_tables[1] = {
 		{0, 0, 0, 0, 0, 0, 0, 0, 0},
