@@ -91,7 +91,7 @@ int distance(int p1, int p2) {
 
 unordered_map<uint64_t, int> static_cash;
 
-int MAX_STATIC_CASH_SIZE = 25000;
+int MAX_STATIC_CASH_SIZE = 10000;
 
 void ReplaceInStaticCash() {
 	while (static_cash.size() > MAX_STATIC_CASH_SIZE) {
@@ -425,7 +425,7 @@ int EXACT = 0;
 Move killers[1001];
 
 
-int MAX_CASH_SIZE = 25000;
+int MAX_CASH_SIZE = 10000;
 
 
 void ReplaceInCash() {
