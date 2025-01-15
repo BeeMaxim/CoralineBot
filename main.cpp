@@ -1379,6 +1379,8 @@ int main(int argc, char **argv) {
 			std::string fen; 
 			std::getline(std::cin, fen);
 
+			static_cash.clear();
+
 			for (int i = 0; i < 1001; ++i) killers[i] = {0, 0, 0, 0};
 			mark_tables[1] = {
 				{0, 0, 0, 0, 0, 0, 0, 0, 0},
