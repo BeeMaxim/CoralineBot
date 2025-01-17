@@ -1187,7 +1187,7 @@ int main(int argc, char **argv) {
 			std::getline(std::cin, move);
 			std::getline(std::cin, str_time);
 
-			if (move != "") {
+			if (move != "00") {
 				auto m = to_move(position, move);
 
 				if (m == Stockfish::Move::none()) {
