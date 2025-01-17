@@ -1187,21 +1187,21 @@ int main(int argc, char **argv) {
 			std::getline(std::cin, move);
 			std::getline(std::cin, str_time);
 
-        	auto m = to_move(position, move);
+			if (move != "") {
+				auto m = to_move(position, move);
 
-			if (m == Stockfish::Move::none()) {
-				std::cerr << "beda" << '\n';
-				break;
+				if (m == Stockfish::Move::none()) {
+					std::cerr << "beda" << '\n';
+					break;
+				}
+
+				states->emplace_back();
+				position.do_move(m, states->back());
+				++ply;
 			}
 
-			states->emplace_back();
-			position.do_move(m, states->back());
-			++ply;
-
 			// static_cash.clear();
-
-			for (int i = 0; i < 1001; ++i) killers[i] = {0, 0, 0, 0};
-
+			// for (int i = 0; i < 1001; ++i) killers[i] = {0, 0, 0, 0};
 
 			int time = atoi(str_time.c_str());
 
@@ -1219,13 +1219,13 @@ int main(int argc, char **argv) {
 				stop_time = 50000000;
 			}
 
-			m = stockfish_iterative(position, stop_time, ply);
+			auto my_m = stockfish_iterative(position, stop_time, ply);
 
-			std::cout << move_to_str(m) << std::endl;
+			std::cout << move_to_str(my_m) << std::endl;
 			std::cout.flush();
 
 			states->emplace_back();
-			position.do_move(m, states->back());
+			position.do_move(my_m, states->back());
 			++ply;
 		}
 		return 0;
