@@ -454,7 +454,7 @@ std::vector<Move> GetAllMoves(Position& position, int color, bool captures = fal
 		BitBoard move_mask = GeneratePseudoPawnMove(position, x, color, captures);
 		MaskToMove(position, moves, move_mask, x, Piece::PAWN, color);
 	}
-
+	
 	BitBoard queen_mask = position.pieces[color][Piece::QUEEN];
 	while (queen_mask) {
 		int x = bsf(queen_mask);

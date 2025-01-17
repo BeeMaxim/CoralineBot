@@ -18,6 +18,10 @@
 #include "MoveGeneration.h"
 #include "newBots.h"
 
+#include "position_.h"
+#include "bitboard_.h"
+#include "search.h"
+
 
 atomic<bool> STOP = false;
 int COUNTER = 0;
@@ -337,7 +341,8 @@ int InnerNEGAB(int deep, int color, Position position, int alpha, int beta, int 
 		best_move = ptr->second.index;
 	}
 
-	// auto start = std::chrono::high_resolution_clock::now();
+	auto start = std::chrono::high_resolution_clock::now();
+
 	vector<Move> result = GetAllMoves(position, color);
 
 	if (best_move >= result.size()) best_move = -1;
@@ -433,16 +438,19 @@ int InnerNEGAB(int deep, int color, Position position, int alpha, int beta, int 
 
 	// auto start = std::chrono::high_resolution_clock::now();
 	// std::cout << "before sort\n";
+	auto finish = std::chrono::high_resolution_clock::now();
+
+	
 	std::sort(result.begin(), result.end(), key);
 	// std::cout << "after sort\n";
-	// auto finish = std::chrono::high_resolution_clock::now();
-    // TIMER += std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count() ;
-	int R = 3;
 	
+    TIMER += std::chrono::duration_cast<std::chrono::nanoseconds>(finish-start).count() ;
+	int R = 3;
+	/*
 	if (!in_check &&  ply > 1 && -InnerNEGAB(deep - deep / 6 - R - 1, color ^ 1, position, -beta, -alpha, ply + 1) >= beta) { // null move
 		history.pop_back();
 		return beta; 
-	}
+	}*/
 	
 	if (deep <= 2 && !in_check) {
 		int margin = 50;
@@ -618,6 +626,8 @@ pair<Move, int> NEGAB(int deep, int color, Position position, int alpha, int bet
 		if (color == Color::WHITE) return { {0, 0, 0, 0}, marker(position) };
 		else return { {0, 0, 0, 0}, -marker(position) };
 	}
+
+	
 	history.push_back(position.hash_);
 	if (Is3Times()) {
 		history.pop_back();
@@ -847,7 +857,7 @@ Move NEGABTIME_test(int color, Position& position) {
 	COUNTER = 0;
 	CASHES = 0;
 	EXACT = 0;
-	for (int32_t deep = 1; deep < 7; ++deep) {
+	for (int32_t deep = 1; deep < 6; ++deep) {
 		cout << "------------------------DEEP: " << deep << "-----------------------------\n";
 		int alpha = -100000, beta = 100000;
 		std::future<pair<Move, int>> thread = std::async(NEGAB, deep, color, copy, alpha, beta);
@@ -883,6 +893,7 @@ Move NEGABTIME(int color, Position& position, time_t stop_time) {
 	for (int32_t deep = 1; deep < 1000; ++deep) {
 		int alpha = -100000, beta = 100000;
 		std::future<pair<Move, int>> thread = std::async(NEGAB, deep, color, position, alpha, beta);
+		//std::future<pair<Move, int>> thread = std::async(searc, deep, position, alpha, beta);
 		bool search = true;
 		while (thread.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
 			// cout << std::chrono::high_resolution_clock::now().time_since_epoch().count() - start << endl;
@@ -1162,103 +1173,35 @@ Position FromFen(string fen) {
 }
 
 int main(int argc, char **argv) {
+	Stockfish::Bitboards::init();
+    Stockfish::Position::init();
 	if (argc == 2 && std::string(argv[1]) == "ping-ping") {
+		Stockfish::Position position;		
+		std::string init_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+		Stockfish::StateListPtr states = Stockfish::StateListPtr(new std::deque<Stockfish::StateInfo>(1));
+    	position.set(init_fen, false, &states->back());
+		int ply = 0;
+
 		while (1) {
-			std::string fen; std::string str_time;
-			std::getline(std::cin, fen);
+			std::string move; std::string str_time;
+			std::getline(std::cin, move);
 			std::getline(std::cin, str_time);
+
+        	auto m = to_move(position, move);
+
+			if (m == Stockfish::Move::none()) {
+				std::cerr << "beda" << '\n';
+				break;
+			}
+
+			states->emplace_back();
+			position.do_move(m, states->back());
+			++ply;
 
 			// static_cash.clear();
 
 			for (int i = 0; i < 1001; ++i) killers[i] = {0, 0, 0, 0};
-			mark_tables[1] = {
-				{0, 0, 0, 0, 0, 0, 0, 0, 0},
-				{0, 1, 1, 1, 1, 1, 1, 1, 1},
-				{0, 1, 1, 1, 1, 1, 1, 1, 1},
-				{0, 1, 1, 1.25, 1.25, 1.25, 1.25, 1, 1},
-				{0, 1, 1, 1.25, 1.5, 1.5, 1.25, 1, 1},
-				{0, 1, 1, 1.25, 1.5, 1.5, 1.25, 1, 1},
-				{0, 1, 1, 1.25, 1.25, 1.25, 1.25, 1, 1},
-				{0, 1, 1, 1, 1, 1, 1, 1, 1},
-				{0, 1, 1, 1, 1, 1, 1, 1, 1},
-			};
 
-			int y = 8;
-			int x = 0;
-			int color = 3;
-
-			Position position;
-
-			for (int i = 0; i <= 1; ++i) {
-				for (int j = 0; j < 6; ++j) position.pieces[i][j] = 0;
-			}
-			for (int i = 0; i < fen.size(); ++i) {
-				int to = (y - 1) * 8 + x;
-				if (fen[i] == ' ') {
-					if (fen[i + 1] == 'w') color = 0;
-					else color = 1;
-					if (fen[i + 3] == '-') position.white_short_castling = false;
-					if (fen[i + 4] == '-') position.white_long_castling = false;
-					break;
-				}
-				if (fen[i] == 'r') {
-					set_1(position.pieces[1][Piece::ROOK], to);
-					x += 1;
-				}
-				else if (fen[i] == 'R') {
-					set_1(position.pieces[0][Piece::ROOK], to);
-					x += 1;
-				}
-				else if (fen[i] == 'n') {
-					set_1(position.pieces[1][Piece::KNIGHT], to);
-					x += 1;
-				}
-				else if (fen[i] == 'N') {
-					set_1(position.pieces[0][Piece::KNIGHT], to);
-					x += 1;
-				}
-				else if (fen[i] == 'b') {
-					set_1(position.pieces[1][Piece::BISHOP], to);
-					x += 1;
-				}
-				else if (fen[i] == 'B') {
-					set_1(position.pieces[0][Piece::BISHOP], to);
-					x += 1;
-				}
-				else if (fen[i] == 'q') {
-					set_1(position.pieces[1][Piece::QUEEN], to);
-					x += 1;
-				}
-				else if (fen[i] == 'Q') {
-					set_1(position.pieces[0][Piece::QUEEN], to);
-					x += 1;
-				}
-				else if (fen[i] == 'k') {
-					set_1(position.pieces[1][Piece::KING], to);
-					x += 1;
-				}
-				else if (fen[i] == 'K') {
-					set_1(position.pieces[0][Piece::KING], to);
-					x += 1;
-				}
-				else if (fen[i] == 'p') {
-					set_1(position.pieces[1][Piece::PAWN], to);
-					x += 1;
-				}
-				else if (fen[i] == 'P') {
-					set_1(position.pieces[0][Piece::PAWN], to);
-					x += 1;
-				}
-				else if (fen[i] == '/') {
-					y -= 1;
-					x = 0;
-				}
-				else {
-					x += (fen[i] - '0');
-				}
-			}
-
-			Move move = {0, 0, 0, 0};
 
 			int time = atoi(str_time.c_str());
 
@@ -1275,16 +1218,15 @@ int main(int argc, char **argv) {
 			else {
 				stop_time = 50000000;
 			}
-			
-			position.Update(Color::WHITE);
-			position.Update(Color::BLACK);
-			position.hash_.init(position);
 
-			move = NEGABTIME(color, position, stop_time);
+			m = stockfish_iterative(position, stop_time, ply);
 
-
-			std::cout << from_code(move) << std::endl;
+			std::cout << move_to_str(m) << std::endl;
 			std::cout.flush();
+
+			states->emplace_back();
+			position.do_move(m, states->back());
+			++ply;
 		}
 		return 0;
 	}
@@ -1302,11 +1244,14 @@ int main(int argc, char **argv) {
 		{0, 1, 1, 1, 1, 1, 1, 1, 1},
 	};
 	if (argc < 2) {
+		stockfish_battle(stockfish_test, stockfish_test);
+		// newBattle1(NEGABTIME_test, NEGABTIME_test);
+		/*
         cout << thread::hardware_concurrency() << '\n';
 		srand(time(nullptr));
 		vector<vector<int>> field(9, vector<int>(9, 0));
-		newBattle1(NEGABTIME_test, NEGABTIME_test);
-		// newBattle1(NEG5AB, NEG5AB);
+		
+		// newBattle1(NEG5AB, NEG5AB);*/
 		return 0;
 	}
 
@@ -1340,7 +1285,7 @@ int main(int argc, char **argv) {
 	for (int i = 0; i <= 1; ++i) {
 		for (int j = 0; j < 6; ++j) position.pieces[i][j] = 0;
 	}
-	/*
+	
 	for (int i = 0; i < fen.size(); ++i) {
 		int to = (y - 1) * 8 + x;
 		if (fen[i] == ' ') {
@@ -1420,7 +1365,7 @@ int main(int argc, char **argv) {
 		else {
 			x += (fen[i] - '0');
 		}
-	}*/
+	}
 
 	// std::cout << argc << '\n';
 	// std::cout << argv[1] << '\n';
@@ -1433,34 +1378,61 @@ int main(int argc, char **argv) {
 		}
 		cout << '\n';
 	}*/
-	//position.Update(Color::WHITE);
-	//position.Update(Color::BLACK);
-	//position.hash_.init(position);
+	position.Update(Color::WHITE);
+	position.Update(Color::BLACK);
+	position.hash_.init(position);
 	int time = atoi(argv[2]);
 
+	Stockfish::StateListPtr states = Stockfish::StateListPtr(new std::deque<Stockfish::StateInfo>(1));
+	Stockfish::Position pos;
+
+	pos.set(fen, false, &states->back());
+
+	std::string init_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+	Stockfish::Position init_pos;
 
 	for (int i = 3; i < argc; ++i) {
+		std::string move = std::string(argv[i]);
 		Position cur = FromFen(string(argv[i]));
 		cur.hash_.init(cur);
 		history.push_back(cur.hash_);
 	}
-	Move move = {0, 0, 0, 0};
+
+	states = Stockfish::StateListPtr(new std::deque<Stockfish::StateInfo>(1));
+    init_pos.set(init_fen, false, &states->back());
+	int ply = 0;
+
+    for (int i = 3; i < argc; ++i) {
+		std::string move = std::string(argv[i]);
+        auto m = to_move(init_pos, move);
+
+        if (m == Stockfish::Move::none()) {
+			std::cerr << "beda" << '\n';
+            break;
+		}
+
+        states->emplace_back();
+        init_pos.do_move(m, states->back());
+		++ply;
+    }
+	// Move move = {0, 0, 0, 0};
 
 	time_t stop_time;
 	if (time > 60) {
-		stop_time = 500000000;
+		stop_time = 5000000000;
 	}
 	else if (time > 25) {
-		stop_time = 300000000;
+		stop_time = 3000000000;
 	}
-	else if (time > 3) {
-		stop_time = 100000000;
+	else if (time > 5) {
+		stop_time = 2000000000;
 	}
 	else {
-		stop_time = 50000000;
+		stop_time = 100000000;
 	}
 
 	// move = NEGABTIME(color, position, stop_time);
+	Stockfish::Move move = stockfish_iterative(init_pos, stop_time, ply);
 
 	/*
 	if (time > 60) {
@@ -1477,6 +1449,8 @@ int main(int argc, char **argv) {
 	}
 	//  newmove move = LLIN5AB(color, field);*/
 	// std::cout << from_code(move);
+
+	std::cout << move_to_str(move);
 
 	return 0;
 }
