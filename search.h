@@ -170,7 +170,7 @@ Stockfish::Move stockfish_test(Stockfish::Position& position) {
 
 	for (int deep = 1; deep < 7; ++deep) {
 		cout << "------------------------DEEP: " << deep << "-----------------------------\n";
-		int alpha = -100000, beta = 100000;
+		int alpha = -1e9 - 1000, beta = 1e9 + 1000;
 
 		std::future<Stockfish::Move> thread = std::async(search<Stockfish::Move>, std::ref(position), deep, alpha, beta, 0);
 		bool still_search = true;
