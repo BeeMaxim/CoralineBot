@@ -1184,8 +1184,8 @@ int main(int argc, char **argv) {
 
 		while (1) {
 			std::string move; std::string str_time;
-			std::getline(std::cin, move);
 			std::getline(std::cin, str_time);
+			std::getline(std::cin, move);
 
 			if (move != "00") {
 				auto m = to_move(position, move);
