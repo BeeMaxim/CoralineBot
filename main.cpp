@@ -1179,11 +1179,12 @@ int main(int argc, char **argv) {
 		Stockfish::Position position;		
 		std::string init_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 		Stockfish::StateListPtr states = Stockfish::StateListPtr(new std::deque<Stockfish::StateInfo>(1));
-    	position.set(init_fen, false, &states->back());
+    	// position.set(init_fen, false, &states->back());
 		int ply = 0;
 
 		while (1) {
-			std::string move; std::string str_time;
+			std::string fen; std::string move; std::string str_time;
+			std::getline(std::cin, fen);
 			std::getline(std::cin, str_time);
 			std::getline(std::cin, move);
 
@@ -1198,6 +1199,9 @@ int main(int argc, char **argv) {
 				states->emplace_back();
 				position.do_move(m, states->back());
 				++ply;
+			}
+			else {
+				position.set(fen, false, &states->back());
 			}
 
 			// static_cash.clear();
