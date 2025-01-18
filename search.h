@@ -127,6 +127,7 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply) 
     if (tt_move_ptr != nullptr) {
         // std::cout << "???\n";
         tt_move = tt_move_ptr->move;
+        assert (tt_move != Stockfish::Move::null());
     }
 
     Stockfish::MovePicker mp(position, tt_move, deep);
