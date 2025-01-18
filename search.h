@@ -123,7 +123,7 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply) 
     Stockfish::MovePicker mp(position, Stockfish::Move::none(), deep);
     Stockfish::StateInfo new_st;
 
-    int score = -1e9 + deep;
+    int score = -1e9 - deep;
     Stockfish::Move move, final_move = Stockfish::Move::null();
 
     while ((move = mp.next_move()) != Stockfish::Move::none()) {
