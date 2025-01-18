@@ -1188,6 +1188,10 @@ int main(int argc, char **argv) {
 			std::getline(std::cin, str_time);
 			std::getline(std::cin, move);
 
+			if (ply == 0) {
+				position.set(fen, false, &states->back());
+			}
+
 			if (move != "00") {
 				auto m = to_move(position, move);
 
@@ -1199,9 +1203,6 @@ int main(int argc, char **argv) {
 				states->emplace_back();
 				position.do_move(m, states->back());
 				++ply;
-			}
-			else {
-				position.set(fen, false, &states->back());
 			}
 
 			// static_cash.clear();
