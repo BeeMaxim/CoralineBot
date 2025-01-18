@@ -25,6 +25,8 @@
 #include "movegen.h"
 #include "types.h"
 
+typedef int ButterflyHistory[4096];
+typedef int CaptureHistory[64][6];
 
 namespace Stockfish {
 
@@ -43,7 +45,9 @@ class MovePicker {
     MovePicker& operator=(const MovePicker&) = delete;
     MovePicker(const Position&,
                Move,
-               Depth);
+               Depth,
+               const ButterflyHistory*      mh,
+               const CaptureHistory* ch);
     // MovePicker(const Position&, Move, int);
     Move next_move();
     void skip_quiet_moves();
@@ -59,6 +63,8 @@ class MovePicker {
     const Position&              pos;
     Move                         ttMove;
     ExtMove *                    cur, *endMoves, *endBadCaptures, *beginBadQuiets, *endBadQuiets;
+    const ButterflyHistory *mainHistory;
+    const CaptureHistory *captureHistory;
     int                          stage;
     int                          threshold;
     Depth                        depth;

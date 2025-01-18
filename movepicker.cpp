@@ -63,9 +63,13 @@ void partial_insertion_sort(ExtMove* begin, ExtMove* end, int limit) {
 // MovePicker constructor for the main search and for the quiescence search
 MovePicker::MovePicker(const Position&              p,
                        Move                         ttm,
-                       Depth depth) :
+                       Depth depth,
+                       const ButterflyHistory* mh,
+                       const CaptureHistory* ch) :
     pos(p),
-    ttMove(ttm) {
+    ttMove(ttm),
+    mainHistory(mh),
+    captureHistory(ch) {
 
     if (pos.checkers())
         stage = EVASION_TT + !(ttm && pos.pseudo_legal(ttm));
@@ -116,6 +120,7 @@ void MovePicker::score() {
         if constexpr (Type == CAPTURES)
             m.value =
               7 * int(PieceValue[pos.piece_on(m.to_sq())]);
+              //+ (captureHistory)[pos.moved_piece(m)][m.to_sq()][type_of(pos.piece_on(m.to_sq()))];
 
         else if constexpr (Type == QUIETS)
         {
@@ -123,6 +128,8 @@ void MovePicker::score() {
             PieceType pt   = type_of(pc);
             Square    from = m.from_sq();
             Square    to   = m.to_sq();
+
+            m.value = 2 * (mainHistory)[pos.side_to_move()][m.from_to()];
 
             // bonus for checks
             m.value += bool(pos.check_squares(pt) & to) * 16384;
@@ -145,6 +152,9 @@ void MovePicker::score() {
             if (pos.capture_stage(m))
                 m.value =
                   PieceValue[pos.piece_on(m.to_sq())] - type_of(pos.moved_piece(m)) + (1 << 28);
+            else {
+                m.value = (mainHistory)[pos.side_to_move()][m.from_to()];
+            }
         }
 }
 

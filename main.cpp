@@ -106,6 +106,7 @@ void ReplaceInStaticCash() {
 int mobile[5] = {0, 8, 4, 2, 2};
 
 int marker(Position& position) {
+	++COUNT;
 	// auto start = std::chrono::high_resolution_clock::now();
 	
 	auto it = static_cash.find(position.hash_.hash);
@@ -451,7 +452,7 @@ int InnerNEGAB(int deep, int color, Position position, int alpha, int beta, int 
 		history.pop_back();
 		return beta; 
 	}*/
-	
+	/*
 	if (deep <= 2 && !in_check) {
 		int margin = 50;
 		int static_score = marker(position);
@@ -460,7 +461,7 @@ int InnerNEGAB(int deep, int color, Position position, int alpha, int beta, int 
 			history.pop_back();
 			return beta;
 		}
-	}
+	}*/
 
 	int score;
 	bool first = false;
@@ -876,10 +877,11 @@ Move NEGABTIME_test(int color, Position& position) {
 		// std::cerr << "base depth: " << deep << endl;
 	}
 	cout << "cash size: " << cash.size() << '\n';
-	cout << "COUNTER: " << COUNTER << '\n';
+	cout << "COUNTER: " << COUNT << '\n';
 	cout << "marker time: " << TIMER << '\n';
 	cout << "CASHES: " << CASHES << '\n';
 	cout << "EXACT: " << EXACT << '\n';
+	COUNT = 0;
 	STOP = false;
 	return move;
 }
@@ -1175,6 +1177,7 @@ Position FromFen(string fen) {
 int main(int argc, char **argv) {
 	Stockfish::Bitboards::init();
     Stockfish::Position::init();
+	initialize_history();
 	if (argc == 2 && std::string(argv[1]) == "ping-ping") {
 		Stockfish::Position position;		
 		std::string init_fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";

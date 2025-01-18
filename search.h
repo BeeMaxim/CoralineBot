@@ -17,6 +17,62 @@
 extern atomic<bool> STOP;
 extern TranspositionTable tt;
 
+int COUNT = 0;
+
+
+const int COLOR_NB = 2; // Number of sides
+const int SQUARE_NB = 64; // Number of squares
+const int PIECE_NB = 6; // Number of piece types
+const int CONTINUATION_HISTORY_SIZE = 6; // Number of continuation history levels
+
+// Main history table
+int mainHistory[COLOR_NB][SQUARE_NB * SQUARE_NB];
+
+// Continuation history tables
+int continuationHistory[CONTINUATION_HISTORY_SIZE][PIECE_NB][SQUARE_NB];
+
+// Capture history table
+int captureHistory[PIECE_NB][SQUARE_NB][PIECE_NB];
+
+// Function to update main and continuation history
+void update_stats(const Stockfish::Position& pos, Stockfish::Move move, int bonus) {
+    if (!pos.capture(move)) {
+        int side = pos.side_to_move();
+        int from = move.from_sq();
+        int to = move.to_sq();
+        int index = from * SQUARE_NB + to;
+        mainHistory[side][index] += bonus;
+
+        Stockfish::Piece pc = pos.moved_piece(move);
+        for (int i = 0; i < CONTINUATION_HISTORY_SIZE; ++i) {
+            continuationHistory[i][pc][to] += bonus;
+        }
+    }
+}
+
+// Function to update capture history
+void update_capture_history(const Stockfish::Position& pos, Stockfish::Move move, int bonus) {
+    if (pos.capture(move)) {
+        Stockfish::Piece pc = pos.moved_piece(move);
+        Stockfish::Square to = move.to_sq();
+        Stockfish::PieceType captured = type_of(pos.piece_on(to));
+        captureHistory[pc][to][captured] += bonus;
+    }
+}
+
+// Function to calculate bonus based on depth
+int stat_bonus(int depth) {
+    // Example bonus calculation based on depth
+    return depth * depth;
+}
+
+// Initialize history tables
+void initialize_history() {
+    memset(mainHistory, 0, sizeof(mainHistory));
+    memset(continuationHistory, 0, sizeof(continuationHistory));
+    memset(captureHistory, 0, sizeof(captureHistory));
+}
+
 
 const std::string move_to_str(Stockfish::Move m, bool chess960 = false) {
     if (m == Stockfish::Move::none())
@@ -60,6 +116,7 @@ Stockfish::Move to_move(const Stockfish::Position& pos, std::string str) {
 
 
 int marker(Stockfish::Position& position) {
+    ++COUNT;
     // 535
     // int material = 300 * position.count<Stockfish::PAWN>() + position.non_pawn_material();
     auto color = position.side_to_move();
@@ -81,7 +138,7 @@ int captures_search(Stockfish::Position& position, int alpha, int beta) {
 	int score = marker(position);
 	alpha = max(alpha, score);
 
-    Stockfish::MovePicker mp(position, Stockfish::Move::none(), 0);
+    Stockfish::MovePicker mp(position, Stockfish::Move::none(), 0, mainHistory, captureHistory);
     Stockfish::StateInfo new_st;
 
     Stockfish::Move move;
@@ -137,7 +194,7 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply) 
         }
     }
 
-    Stockfish::MovePicker mp(position, tt_move, deep);
+    Stockfish::MovePicker mp(position, tt_move, deep, mainHistory, captureHistory);
     Stockfish::StateInfo new_st;
 
     int score = -1e9 - deep;
@@ -148,7 +205,7 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply) 
         if (!position.legal(move)) {
             continue;
         }
-        
+
         position.do_move(move, new_st);
 
         int cur_score = -search<int>(position, deep - 1, -beta, -alpha, ply + 1);
@@ -161,8 +218,16 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply) 
 
             if (score > alpha) {
                 alpha = score;
+                if (!position.capture(move)) {
+                    update_stats(position, move, stat_bonus(deep));
+                }
             }
             if (alpha >= beta) {
+                if (!position.capture(move)) {
+                    update_stats(position, move, stat_bonus(deep));
+                } else {
+                    update_capture_history(position, move, stat_bonus(deep));
+                }
                 break;
             }
         }
@@ -188,11 +253,12 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply) 
 
 
 Stockfish::Move stockfish_test(Stockfish::Position& position) {
+    COUNT = 0;
 	STOP = false;
 	time_t start = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 	Stockfish::Move move;
 
-	for (int deep = 1; deep < 7; ++deep) {
+	for (int deep = 1; deep < 8; ++deep) {
 		cout << "------------------------DEEP: " << deep << "-----------------------------\n";
 		int alpha = -1e9 - 1000, beta = 1e9 + 1000;
 
@@ -210,6 +276,7 @@ Stockfish::Move stockfish_test(Stockfish::Position& position) {
 
 	}
 	STOP = false;
+    std::cout << COUNT << '\n';
 
 	return move;
 }
@@ -250,6 +317,7 @@ Stockfish::Move stockfish_iterative(Stockfish::Position& position, time_t stop_t
 
 
 void stockfish_battle(Stockfish::Move bot1(Stockfish::Position&), Stockfish::Move bot2(Stockfish::Position&)) {
+    initialize_history();
 	Stockfish::StateListPtr states = Stockfish::StateListPtr(new std::deque<Stockfish::StateInfo>(1));
 	Stockfish::Position position;
 	std::string fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
