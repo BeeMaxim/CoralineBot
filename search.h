@@ -219,14 +219,14 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply) 
             if (score > alpha) {
                 alpha = score;
                 if (!position.capture(move)) {
-                    update_stats(position, move, stat_bonus(deep));
+                    // update_stats(position, move, stat_bonus(deep));
                 }
             }
             if (alpha >= beta) {
                 if (!position.capture(move)) {
-                    update_stats(position, move, stat_bonus(deep));
+                    // update_stats(position, move, stat_bonus(deep));
                 } else {
-                    update_capture_history(position, move, stat_bonus(deep));
+                    // update_capture_history(position, move, stat_bonus(deep));
                 }
                 break;
             }
