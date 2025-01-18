@@ -127,7 +127,7 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply) 
     if (tt_move_ptr != nullptr) {
         // std::cout << "???\n";
         tt_move = tt_move_ptr->move;
-        assert (tt_move != Stockfish::Move::null());
+        // assert (tt_move != Stockfish::Move::null());
     }
 
     Stockfish::MovePicker mp(position, tt_move, deep);
@@ -157,8 +157,9 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply) 
             }
         }
     }
-
-    tt.save(position.key(), score, Bound::BOUND_EXACT, deep, final_move);
+    if (final_move != Stockfish::Move::nul()) {
+        tt.save(position.key(), score, Bound::BOUND_EXACT, deep, final_move);
+    }
 
     if constexpr (std::is_integral_v<T>) {
         if (final_move == Stockfish::Move::null()) {
