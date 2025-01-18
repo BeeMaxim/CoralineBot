@@ -1192,7 +1192,7 @@ int main(int argc, char **argv) {
 				position.set(fen, false, &states->back());
 			}
 
-			if (move != "00") {
+			else if (move != "00") {
 				auto m = to_move(position, move);
 
 				if (m == Stockfish::Move::none()) {
