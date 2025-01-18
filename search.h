@@ -247,6 +247,7 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply) 
     } 
     else {
         std::cerr << "SCORE: " << score << '\n';
+        std::cerr << move_to_str(final_move) << " ???\n";
         return final_move;
     }
 };
@@ -288,7 +289,7 @@ Stockfish::Move stockfish_iterative(Stockfish::Position& position, time_t stop_t
 	Stockfish::Move move;
 	
 	for (int32_t deep = 1; deep < 1000; ++deep) {
-		int alpha = -100000, beta = 100000;
+		int alpha = -1e9 - 1000, beta = 1e9 + 1000;
 		std::future<Stockfish::Move> thread = std::async(search<Stockfish::Move>, std::ref(position), deep, alpha, beta, ply);
 
 		bool search = true;
