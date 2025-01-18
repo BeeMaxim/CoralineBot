@@ -129,7 +129,7 @@ void MovePicker::score() {
             Square    from = m.from_sq();
             Square    to   = m.to_sq();
 
-            m.value = 2 * (mainHistory)[pos.side_to_move()][m.from_to()];
+            // m.value = 2 * (mainHistory)[pos.side_to_move()][m.from_to()];
 
             // bonus for checks
             m.value += bool(pos.check_squares(pt) & to) * 16384;
@@ -153,7 +153,7 @@ void MovePicker::score() {
                 m.value =
                   PieceValue[pos.piece_on(m.to_sq())] - type_of(pos.moved_piece(m)) + (1 << 28);
             else {
-                m.value = (mainHistory)[pos.side_to_move()][m.from_to()];
+                // m.value = (mainHistory)[pos.side_to_move()][m.from_to()];
             }
         }
 }
