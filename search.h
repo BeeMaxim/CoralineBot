@@ -157,7 +157,7 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply) 
             }
         }
     }
-    if (final_move != Stockfish::Move::nul()) {
+    if (final_move != Stockfish::Move::null()) {
         tt.save(position.key(), score, Bound::BOUND_EXACT, deep, final_move);
     }
 
