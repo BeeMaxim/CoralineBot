@@ -31,7 +31,7 @@ int TIMER = -1;
 
 
 // vector<vector<int>> mark_tables[10];
-
+TranspositionTable tt(10000);
 
 
 string from_code(Move m) {
@@ -857,7 +857,7 @@ Move NEGABTIME_test(int color, Position& position) {
 	COUNTER = 0;
 	CASHES = 0;
 	EXACT = 0;
-	for (int32_t deep = 1; deep < 6; ++deep) {
+	for (int32_t deep = 1; deep < 7; ++deep) {
 		cout << "------------------------DEEP: " << deep << "-----------------------------\n";
 		int alpha = -100000, beta = 100000;
 		std::future<pair<Move, int>> thread = std::async(NEGAB, deep, color, copy, alpha, beta);
@@ -1191,7 +1191,6 @@ int main(int argc, char **argv) {
 			if (ply == 0) {
 				position.set(fen, false, &states->back());
 			}
-
 			else if (move != "00") {
 				auto m = to_move(position, move);
 

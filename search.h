@@ -5,6 +5,7 @@
 #include "misc.h"
 #include "evaluate.h"
 #include "movepicker.h"
+#include "tt.h"
 
 #include <iostream>
 #include <string>
@@ -14,6 +15,7 @@
 
 
 extern atomic<bool> STOP;
+extern TranspositionTable tt;
 
 
 const std::string move_to_str(Stockfish::Move m, bool chess960 = false) {
@@ -59,9 +61,9 @@ Stockfish::Move to_move(const Stockfish::Position& pos, std::string str) {
 
 int marker(Stockfish::Position& position) {
     // 535
-    int material = 300 * position.count<Stockfish::PAWN>() + position.non_pawn_material();
+    // int material = 300 * position.count<Stockfish::PAWN>() + position.non_pawn_material();
     auto color = position.side_to_move();
-    material = 300 * (position.count<Stockfish::PAWN>(color) - position.count<Stockfish::PAWN>(Stockfish::Color(1 - color)));
+    int material = 300 * (position.count<Stockfish::PAWN>(color) - position.count<Stockfish::PAWN>(Stockfish::Color(1 - color)));
     material += position.non_pawn_material(color) - position.non_pawn_material(Stockfish::Color(1 - color));
 
     int mobility = evaluate_mobility<Stockfish::WHITE>(position) - evaluate_mobility<Stockfish::BLACK>(position);
@@ -120,14 +122,20 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply) 
         }
     }
 
-    Stockfish::MovePicker mp(position, Stockfish::Move::none(), deep);
+    Stockfish::Move tt_move = Stockfish::Move::none();
+    auto tt_move_ptr = tt.probe(position.key());
+    if (tt_move_ptr != nullptr) {
+        // std::cout << "???\n";
+        tt_move = tt_move_ptr->move;
+    }
+
+    Stockfish::MovePicker mp(position, tt_move, deep);
     Stockfish::StateInfo new_st;
 
     int score = -1e9 - deep;
     Stockfish::Move move, final_move = Stockfish::Move::null();
 
     while ((move = mp.next_move()) != Stockfish::Move::none()) {
-        // std::cout << move_to_str(move) << '\n';
 
         if (!position.legal(move)) {
             continue;
@@ -148,6 +156,8 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply) 
             }
         }
     }
+
+    tt.save(position.key(), score, Bound::BOUND_EXACT, deep, final_move);
 
     if constexpr (std::is_integral_v<T>) {
         if (final_move == Stockfish::Move::null()) {
@@ -258,6 +268,7 @@ void stockfish_battle(Stockfish::Move bot1(Stockfish::Position&), Stockfish::Mov
 		cout << clock() - start << endl;
 	}
 	cout << "Moves : " << cnt;
+    tt.clear();
 }
 
 

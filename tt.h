@@ -50,31 +50,3 @@ public:
 private:
     std::vector<TTEntry> table; // Хеш-таблица
 };
-
-// Пример использования
-int main() {
-    // Создаём transposition table с размером 1024 записи
-    TranspositionTable tt(1024);
-
-    // Пример ключа позиции (обычно это Zobrist hash)
-    uint64_t posKey = 123456789;
-
-    // Сохраняем данные в таблицу
-    tt.save(posKey, 42, BOUND_EXACT, 5, 1234);
-
-    // Ищем данные в таблице
-    TTEntry* entry = tt.probe(posKey);
-    if (entry) {
-        std::cout << "Found entry: value = " << entry->value
-                  << ", depth = " << entry->depth
-                  << ", move = " << entry->move
-                  << ", bound = " << entry->bound << std::endl;
-    } else {
-        std::cout << "Entry not found!" << std::endl;
-    }
-
-    // Очищаем таблицу
-    tt.clear();
-
-    return 0;
-}
