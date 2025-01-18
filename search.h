@@ -125,24 +125,34 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply) 
     Stockfish::Move tt_move = Stockfish::Move::none();
     auto tt_move_ptr = tt.probe(position.key());
     if (tt_move_ptr != nullptr) {
-        // std::cout << "???\n";
         tt_move = tt_move_ptr->move;
-        // assert (tt_move != Stockfish::Move::null());
+        if constexpr (std::is_integral_v<T>) {
+            int value = tt_move_ptr->value;
+            if (tt_move_ptr->depth >= deep &&
+                (tt_move_ptr->bound == BOUND_EXACT ||
+                (tt_move_ptr->bound == BOUND_LOWER && value >= beta) ||
+                (tt_move_ptr->bound == BOUND_UPPER && value <= alpha))) {
+                    return value;
+            }
+        }
     }
 
     Stockfish::MovePicker mp(position, tt_move, deep);
     Stockfish::StateInfo new_st;
 
     int score = -1e9 - deep;
-    Stockfish::Move move, final_move = Stockfish::Move::null();
+    Stockfish::Move move, final_move = Stockfish::Move::none();
 
     while ((move = mp.next_move()) != Stockfish::Move::none()) {
 
         if (!position.legal(move)) {
             continue;
         }
+        
         position.do_move(move, new_st);
+
         int cur_score = -search<int>(position, deep - 1, -beta, -alpha, ply + 1);
+
         position.undo_move(move);
 
         if (cur_score > score) {
@@ -157,12 +167,14 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply) 
             }
         }
     }
-    if (final_move != Stockfish::Move::null()) {
-        tt.save(position.key(), score, Bound::BOUND_EXACT, deep, final_move);
+    if (final_move != Stockfish::Move::none()) {
+        Bound bound = (score >= beta) ? BOUND_LOWER :
+              (score <= alpha) ? BOUND_UPPER : BOUND_EXACT;
+        tt.save(position.key(), score, bound, deep, final_move);
     }
 
     if constexpr (std::is_integral_v<T>) {
-        if (final_move == Stockfish::Move::null()) {
+        if (final_move == Stockfish::Move::none()) {
             if (position.checkers()) return score;
             return 0;
         }
