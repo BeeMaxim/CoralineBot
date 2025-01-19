@@ -354,6 +354,7 @@ Stockfish::Move stockfish_test(Stockfish::Position& position) {
 
 Stockfish::Move stockfish_iterative(Stockfish::Position& position, time_t stop_time, int ply) {
 	STOP = false;
+    initialize_history();
 	time_t start = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 	Stockfish::Move move;
 	
