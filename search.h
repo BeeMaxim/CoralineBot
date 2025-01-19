@@ -42,11 +42,11 @@ void update_stats(const Stockfish::Position& pos, Stockfish::Move move, int bonu
         int to = move.to_sq();
         int index = from * SQUARE_NB + to;
         mainHistory[side][index] += bonus;
-
+        /*
         Stockfish::Piece pc = pos.moved_piece(move);
         for (int i = 0; i < CONTINUATION_HISTORY_SIZE; ++i) {
             continuationHistory[i][pc][to] += bonus;
-        }
+        }*/
     }
 }
 
@@ -219,12 +219,12 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply) 
             if (score > alpha) {
                 alpha = score;
                 if (!position.capture(move)) {
-                    // update_stats(position, move, stat_bonus(deep));
+                    update_stats(position, move, stat_bonus(deep));
                 }
             }
             if (alpha >= beta) {
                 if (!position.capture(move)) {
-                    // update_stats(position, move, stat_bonus(deep));
+                    update_stats(position, move, stat_bonus(deep));
                 } else {
                     // update_capture_history(position, move, stat_bonus(deep));
                 }
