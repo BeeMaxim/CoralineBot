@@ -220,13 +220,14 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
             }
         }
     }
-    
+    /**
     if (!is_null_move && ply >= 4 && !position.checkers()) {
         int R = 3 + deep / 6; // Reduction factor (adaptive based on depth)
         Stockfish::StateInfo null_st;
-
+        std::cerr << "before " << position.checkers() << '\n';
         position.do_null_move(null_st);
         int null_score = -search<int>(position, deep - 1 - R, -beta, -beta + 1, ply + 1, global_ply + 1, true);
+        std::cerr << "after " << position.checkers() << '\n';
         position.undo_null_move();
 
         if (null_score >= beta) {
@@ -234,7 +235,7 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
                 return null_score; // Beta cutoff
             }
         }
-    }
+    }*/
 
     Stockfish::MovePicker mp(position, tt_move, deep, mainHistory, continuationHistory[0], captureHistory);
     Stockfish::StateInfo killer;
