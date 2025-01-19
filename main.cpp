@@ -1211,6 +1211,7 @@ int main(int argc, char **argv) {
 			// for (int i = 0; i < 1001; ++i) killers[i] = {0, 0, 0, 0};
 
 			int time = atoi(str_time.c_str());
+			bool is_hard = true;
 
 			time_t stop_time;
 			if (time > 60) {
@@ -1221,12 +1222,13 @@ int main(int argc, char **argv) {
 			}
 			else if (time > 3) {
 				stop_time = 200000000;
+				is_hard = false;
 			}
 			else {
 				stop_time = 50000000;
 			}
 
-			auto my_m = stockfish_iterative(position, stop_time, ply);
+			auto my_m = stockfish_iterative(position, stop_time, ply, is_hard=is_hard);
 
 			std::cout << move_to_str(my_m) << std::endl;
 			std::cout.flush();

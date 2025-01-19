@@ -96,9 +96,14 @@ int stat_bonus(int depth) {
 
 // Initialize history tables
 void initialize_history() {
-    memset(mainHistory, 0, sizeof(mainHistory));
-    memset(continuationHistory, 0, sizeof(continuationHistory));
-    memset(captureHistory, 0, sizeof(captureHistory));
+    //memset(mainHistory, 0, sizeof(mainHistory));
+    for (int i = 0; i < COLOR_NB; ++i) {
+        for (int j = 0; j < SQUARE_NB * SQUARE_NB; ++j) {
+            mainHistory[i][j] = 0;
+        }
+    }
+    //memset(continuationHistory, 0, sizeof(continuationHistory));
+    //memset(captureHistory, 0, sizeof(captureHistory));
 }
 
 
@@ -353,7 +358,7 @@ Stockfish::Move stockfish_test(Stockfish::Position& position) {
 }
 
 
-Stockfish::Move stockfish_iterative(Stockfish::Position& position, time_t stop_time, int ply) {
+Stockfish::Move stockfish_iterative(Stockfish::Position& position, time_t stop_time, int ply, bool is_hard=true) {
 	STOP = false;
     initialize_history();
 	time_t start = std::chrono::high_resolution_clock::now().time_since_epoch().count();
@@ -361,24 +366,32 @@ Stockfish::Move stockfish_iterative(Stockfish::Position& position, time_t stop_t
 	
 	for (int32_t deep = 1; deep < 1000; ++deep) {
 		int alpha = -1e9 - 1000, beta = 1e9 + 1000;
-		std::future<Stockfish::Move> thread = std::async(search<Stockfish::Move>, std::ref(position), deep, alpha, beta, 0, ply, false);
+        if (is_hard) {
+            std::future<Stockfish::Move> thread = std::async(search<Stockfish::Move>, std::ref(position), deep, alpha, beta, 0, ply, false);
 
-		bool search = true;
-		while (thread.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
-			if ((std::chrono::high_resolution_clock::now().time_since_epoch().count() - start) >= stop_time) {
-				search = false;
-				break;
-			}
-		}
+            bool search = true;
+            while (thread.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
+                if ((std::chrono::high_resolution_clock::now().time_since_epoch().count() - start) >= stop_time) {
+                    search = false;
+                    break;
+                }
+            }
 
-		if (search) {
-			move = thread.get();
-		}
-		else {
-			STOP = true;
-			thread.get();
-			break;
-		}
+            if (search) {
+                move = thread.get();
+            }
+            else {
+                STOP = true;
+                thread.get();
+                break;
+            }
+        }
+        else {
+            if (std::chrono::high_resolution_clock::now().time_since_epoch().count() - start >= stop_time / 2) {
+                break;
+            }
+            move = search<Stockfish::Move>(position, deep, alpha, beta, 0, ply, false);
+        }
 
 		std::cerr << "base depth: " << deep << endl;
 	}
