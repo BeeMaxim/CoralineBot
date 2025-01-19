@@ -1211,6 +1211,7 @@ int main(int argc, char **argv) {
 			// for (int i = 0; i < 1001; ++i) killers[i] = {0, 0, 0, 0};
 
 			int time = atoi(str_time.c_str());
+			std::cerr << "TIME " << time << '\n';
 			bool is_hard = true;
 
 			time_t stop_time;
@@ -1221,7 +1222,7 @@ int main(int argc, char **argv) {
 				stop_time = 300000000;
 			}
 			else if (time > 3) {
-				stop_time = 200000000;
+				stop_time = 500000000;
 				is_hard = false;
 			}
 			else {
