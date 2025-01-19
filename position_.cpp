@@ -1022,13 +1022,13 @@ void Position::do_castling(Color us, Square from, Square& to, Square& rfrom, Squ
 
 // Used to do a "null move": it flips
 // the side to move without executing any move on the board.
-/*
-void Position::do_null_move(StateInfo& newSt, const TranspositionTable& tt) {
+
+void Position::do_null_move(StateInfo& newSt) {
 
     assert(!checkers());
     assert(&newSt != st);
 
-    std::memcpy(&newSt, st, offsetof(StateInfo, accumulatorBig));
+    std::memcpy(&newSt, st, offsetof(StateInfo, key));
 
     newSt.previous = st;
     st->next       = &newSt;
@@ -1036,8 +1036,6 @@ void Position::do_null_move(StateInfo& newSt, const TranspositionTable& tt) {
 
     st->dirtyPiece.dirty_num               = 0;
     st->dirtyPiece.piece[0]                = NO_PIECE;  // Avoid checks in UpdateAccumulator()
-    st->accumulatorBig.computed[WHITE]     = st->accumulatorBig.computed[BLACK] =
-      st->accumulatorSmall.computed[WHITE] = st->accumulatorSmall.computed[BLACK] = false;
 
     if (st->epSquare != SQ_NONE)
     {
@@ -1047,7 +1045,7 @@ void Position::do_null_move(StateInfo& newSt, const TranspositionTable& tt) {
 
     st->key ^= Zobrist::side;
     ++st->rule50;
-    prefetch(tt.first_entry(key()));
+    // prefetch(tt.first_entry(key()));
 
     st->pliesFromNull = 0;
 
@@ -1058,7 +1056,7 @@ void Position::do_null_move(StateInfo& newSt, const TranspositionTable& tt) {
     st->repetition = 0;
 
     assert(pos_is_ok());
-}*/
+}
 
 
 // Must be used to undo a "null move"

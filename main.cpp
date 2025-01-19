@@ -858,7 +858,7 @@ Move NEGABTIME_test(int color, Position& position) {
 	COUNTER = 0;
 	CASHES = 0;
 	EXACT = 0;
-	for (int32_t deep = 1; deep < 7; ++deep) {
+	for (int32_t deep = 1; deep < 8; ++deep) {
 		cout << "------------------------DEEP: " << deep << "-----------------------------\n";
 		int alpha = -100000, beta = 100000;
 		std::future<pair<Move, int>> thread = std::async(NEGAB, deep, color, copy, alpha, beta);
@@ -1252,7 +1252,7 @@ int main(int argc, char **argv) {
 	};
 	if (argc < 2) {
 		stockfish_battle(stockfish_test, stockfish_test);
-		// newBattle1(NEGABTIME_test, NEGABTIME_test);
+		//newBattle1(NEGABTIME_test, NEGABTIME_test);
 		/*
         cout << thread::hardware_concurrency() << '\n';
 		srand(time(nullptr));

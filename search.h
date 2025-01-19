@@ -29,19 +29,44 @@ const int CONTINUATION_HISTORY_SIZE = 6; // Number of continuation history level
 int mainHistory[COLOR_NB][SQUARE_NB * SQUARE_NB];
 
 // Continuation history tables
-int continuationHistory[CONTINUATION_HISTORY_SIZE][PIECE_NB][SQUARE_NB];
+int continuationHistory[300][PIECE_NB][SQUARE_NB];
 
 // Capture history table
 int captureHistory[PIECE_NB][SQUARE_NB][PIECE_NB];
 
+Stockfish::Move killer_moves[300][2];
+
+
+void update_continuation_histories(Stockfish::Piece pc, Stockfish::Square to, int bonus, int ply) {
+    static constexpr std::array<std::pair<int, int>, 6> conthist_bonuses = {
+      {{1, 1025}, {2, 621}, {3, 325}, {4, 512}, {5, 122}, {6, 534}}};
+
+    continuationHistory[0][pc][to] += bonus;
+
+    for (const auto [i, weight] : conthist_bonuses)
+    {
+        // Only update the first 2 continuation histories if we are in check
+        //if (ss->inCheck && i > 2)
+         //   break;
+        //if (((ss - i)->currentMove).is_ok())
+        if (ply - i >= 0) {
+            //continuationHistory[ply - i][pc][to] -= bonus * weight / 1024;
+        }
+    }
+}
+
 // Function to update main and continuation history
-void update_stats(const Stockfish::Position& pos, Stockfish::Move move, int bonus) {
+void update_stats(const Stockfish::Position& pos, Stockfish::Move move, int bonus, int ply) {
     if (!pos.capture(move)) {
         int side = pos.side_to_move();
         int from = move.from_sq();
-        int to = move.to_sq();
+        Stockfish::Square to = move.to_sq();
         int index = from * SQUARE_NB + to;
         mainHistory[side][index] += bonus;
+
+        Stockfish::Piece pc = pos.moved_piece(move);
+
+        update_continuation_histories(pc, to, bonus, ply);
         /*
         Stockfish::Piece pc = pos.moved_piece(move);
         for (int i = 0; i < CONTINUATION_HISTORY_SIZE; ++i) {
@@ -49,6 +74,9 @@ void update_stats(const Stockfish::Position& pos, Stockfish::Move move, int bonu
         }*/
     }
 }
+
+
+
 
 // Function to update capture history
 void update_capture_history(const Stockfish::Position& pos, Stockfish::Move move, int bonus) {
@@ -134,11 +162,10 @@ int marker(Stockfish::Position& position) {
 
 int captures_search(Stockfish::Position& position, int alpha, int beta) {
 	if (STOP) return 0;
-
 	int score = marker(position);
 	alpha = max(alpha, score);
 
-    Stockfish::MovePicker mp(position, Stockfish::Move::none(), 0, mainHistory, captureHistory);
+    Stockfish::MovePicker mp(position, Stockfish::Move::none(), 0, mainHistory, continuationHistory[0], captureHistory);
     Stockfish::StateInfo new_st;
 
     Stockfish::Move move;
@@ -163,19 +190,19 @@ int captures_search(Stockfish::Position& position, int alpha, int beta) {
 
 
 template<typename T>
-T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply) {
+T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, int global_ply, bool is_null_move=false) {
     if (STOP) {
         if constexpr (std::is_integral_v<T>) return 0;
         else return Stockfish::Move();
     }
 
     if constexpr (std::is_integral_v<T>) {
-        if (position.is_draw(ply)) {
+        if (position.is_draw(global_ply)) {
             return 0;
         }
         if (deep <= 0) {
             return captures_search(position, alpha, beta);
-            return marker(position);
+            // return marker(position);
         }
     }
 
@@ -193,12 +220,50 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply) 
             }
         }
     }
+    
+    if (!is_null_move && ply >= 4 && !position.checkers()) {
+        int R = 3 + deep / 6; // Reduction factor (adaptive based on depth)
+        Stockfish::StateInfo null_st;
 
-    Stockfish::MovePicker mp(position, tt_move, deep, mainHistory, captureHistory);
+        position.do_null_move(null_st);
+        int null_score = -search<int>(position, deep - 1 - R, -beta, -beta + 1, ply + 1, global_ply + 1, true);
+        position.undo_null_move();
+
+        if (null_score >= beta) {
+            if constexpr (std::is_integral_v<T>) {
+                return null_score; // Beta cutoff
+            }
+        }
+    }
+
+    Stockfish::MovePicker mp(position, tt_move, deep, mainHistory, continuationHistory[0], captureHistory);
+    Stockfish::StateInfo killer;
     Stockfish::StateInfo new_st;
 
     int score = -1e9 - deep;
     Stockfish::Move move, final_move = Stockfish::Move::none();
+    /*
+    if constexpr (std::is_integral_v<T>) {
+        for (int i = 0; i < 2; ++i) {
+            Stockfish::Move killer_move = killer_moves[ply][i];
+            if (killer_move != Stockfish::Move::none() && position.legal(killer_move)) {
+                position.do_move(killer_move, killer);
+                int cur = -search<int>(position, deep - 1, -beta, -alpha, ply + 1);
+                position.undo_move(killer_move);
+
+                if (cur > score) {
+                    score = cur;
+                    alpha = score;
+                    if (alpha >= beta) {
+                        killer_moves[ply][i] = killer_move;
+                        return score;
+                    }
+                }
+            }
+        }
+    }*/
+
+    move = Stockfish::Move::none();
 
     while ((move = mp.next_move()) != Stockfish::Move::none()) {
 
@@ -208,7 +273,7 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply) 
 
         position.do_move(move, new_st);
 
-        int cur_score = -search<int>(position, deep - 1, -beta, -alpha, ply + 1);
+        int cur_score = -search<int>(position, deep - 1, -beta, -alpha, ply + 1, global_ply + 1, is_null_move);
 
         position.undo_move(move);
 
@@ -219,12 +284,14 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply) 
             if (score > alpha) {
                 alpha = score;
                 if (!position.capture(move)) {
-                    update_stats(position, move, stat_bonus(deep));
+                    update_stats(position, move, stat_bonus(deep), global_ply);
                 }
             }
             if (alpha >= beta) {
+                killer_moves[ply][1] = killer_moves[ply][0];
+                killer_moves[ply][0] = move;
                 if (!position.capture(move)) {
-                    update_stats(position, move, stat_bonus(deep));
+                    update_stats(position, move, stat_bonus(deep), global_ply);
                 } else {
                     // update_capture_history(position, move, stat_bonus(deep));
                 }
@@ -232,7 +299,7 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply) 
             }
         }
     }
-    if (final_move != Stockfish::Move::none()) {
+    if (final_move != Stockfish::Move::none() && (tt_move_ptr == nullptr || tt_move_ptr->depth < deep)) {
         Bound bound = (score >= beta) ? BOUND_LOWER :
               (score <= alpha) ? BOUND_UPPER : BOUND_EXACT;
         tt.save(position.key(), score, bound, deep, final_move);
@@ -254,16 +321,18 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply) 
 
 
 Stockfish::Move stockfish_test(Stockfish::Position& position) {
+    for (int i = 0; i < 100; ++i) killer_moves[i][0] = killer_moves[i][1] = Stockfish::Move::none();
     COUNT = 0;
 	STOP = false;
 	time_t start = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    initialize_history();
 	Stockfish::Move move;
 
 	for (int deep = 1; deep < 8; ++deep) {
 		cout << "------------------------DEEP: " << deep << "-----------------------------\n";
 		int alpha = -1e9 - 1000, beta = 1e9 + 1000;
 
-		std::future<Stockfish::Move> thread = std::async(search<Stockfish::Move>, std::ref(position), deep, alpha, beta, 0);
+		std::future<Stockfish::Move> thread = std::async(search<Stockfish::Move>, std::ref(position), deep, alpha, beta, 0, 0, false);
 		bool still_search = true;
 
 		if (still_search) {
@@ -290,7 +359,7 @@ Stockfish::Move stockfish_iterative(Stockfish::Position& position, time_t stop_t
 	
 	for (int32_t deep = 1; deep < 1000; ++deep) {
 		int alpha = -1e9 - 1000, beta = 1e9 + 1000;
-		std::future<Stockfish::Move> thread = std::async(search<Stockfish::Move>, std::ref(position), deep, alpha, beta, ply);
+		std::future<Stockfish::Move> thread = std::async(search<Stockfish::Move>, std::ref(position), deep, alpha, beta, 0, ply, false);
 
 		bool search = true;
 		while (thread.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
