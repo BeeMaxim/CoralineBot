@@ -25,7 +25,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <string>
-
+#include <iostream>
 #include "types.h"
 
 namespace Stockfish {
@@ -37,6 +37,7 @@ std::string pretty(Bitboard b);
 
 }  // namespace Stockfish::Bitboards
 
+constexpr Bitboard DarkSquares = 0xAA55AA55AA55AA55ULL;
 constexpr Bitboard FileABB = 0x0101010101010101ULL;
 constexpr Bitboard FileBBB = FileABB << 1;
 constexpr Bitboard FileCBB = FileABB << 2;
@@ -54,6 +55,11 @@ constexpr Bitboard Rank5BB = Rank1BB << (8 * 4);
 constexpr Bitboard Rank6BB = Rank1BB << (8 * 5);
 constexpr Bitboard Rank7BB = Rank1BB << (8 * 6);
 constexpr Bitboard Rank8BB = Rank1BB << (8 * 7);
+
+constexpr Bitboard QueenSide   = FileABB | FileBBB | FileCBB | FileDBB;
+constexpr Bitboard CenterFiles = FileCBB | FileDBB | FileEBB | FileFBB;
+constexpr Bitboard KingSide    = FileEBB | FileFBB | FileGBB | FileHBB;
+constexpr Bitboard Center      = (FileDBB | FileEBB) & (Rank4BB | Rank5BB);
 
 extern uint8_t PopCnt16[1 << 16];
 extern uint8_t SquareDistance[SQUARE_NB][SQUARE_NB];
@@ -227,7 +233,6 @@ inline Bitboard attacks_bb(Square s) {
 // Sliding piece attacks do not continue passed an occupied square.
 template<PieceType Pt>
 inline Bitboard attacks_bb(Square s, Bitboard occupied) {
-
     assert((Pt != PAWN) && (is_ok(s)));
 
     switch (Pt)

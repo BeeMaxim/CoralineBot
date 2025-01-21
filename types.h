@@ -16,7 +16,7 @@
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 #include <cstddef>
-
+#include <iostream>
 
 #ifndef TYPES_H_INCLUDED
     #define TYPES_H_INCLUDED
@@ -142,6 +142,7 @@ enum Bound {
 // Value is used as an alias for int, this is done to differentiate between a search
 // value and any other integer value. The values used in search are always supposed
 // to be in the range (-VALUE_NONE, VALUE_NONE] and should not exceed this range.
+/*
 using Value = int;
 
 constexpr Value VALUE_ZERO     = 0;
@@ -170,16 +171,145 @@ constexpr bool is_loss(Value value) {
     return value <= VALUE_TB_LOSS_IN_MAX_PLY;
 }
 
-constexpr bool is_decisive(Value value) { return is_win(value) || is_loss(value); }
+constexpr bool is_decisive(Value value) { return is_win(value) || is_loss(value); }*/
 
 // In the code, we make the assumption that these values
 // are such that non_pawn_material() can be used to uniquely
 // identify the material on the board.
+/*
 constexpr Value PawnValue   = 208;
 constexpr Value KnightValue = 781;
 constexpr Value BishopValue = 825;
 constexpr Value RookValue   = 1276;
-constexpr Value QueenValue  = 2538;
+constexpr Value QueenValue  = 2538;*/
+
+
+enum Value : int {
+  VALUE_ZERO      = 0,
+  VALUE_DRAW      = 0,
+  VALUE_KNOWN_WIN = 10000,
+  VALUE_MATE      = 32000,
+  VALUE_INFINITE  = 32001,
+  VALUE_NONE      = 32002,
+
+  VALUE_TB_WIN_IN_MAX_PLY  =  VALUE_MATE - 2 * MAX_PLY,
+  VALUE_TB_LOSS_IN_MAX_PLY = -VALUE_MATE + 2 * MAX_PLY,
+  VALUE_MATE_IN_MAX_PLY  =  VALUE_MATE - MAX_PLY,
+  VALUE_MATED_IN_MAX_PLY = -VALUE_MATE + MAX_PLY,
+
+  PawnValueMg   = 128,   PawnValueEg   = 213,
+  KnightValueMg = 781,   KnightValueEg = 854,
+  BishopValueMg = 825,   BishopValueEg = 915,
+  RookValueMg   = 1276,  RookValueEg   = 1380,
+  QueenValueMg  = 2538,  QueenValueEg  = 2682,
+  Tempo = 28,
+
+  MidgameLimit  = 15258, EndgameLimit  = 3915
+};
+
+/*
+inline Value eg_value(Score s) {
+  union { uint16_t u; int16_t s; } eg = { uint16_t(unsigned(s + 0x8000) >> 16) };
+  return Value(eg.s);
+}
+
+inline Value mg_value(Score s) {
+  union { uint16_t u; int16_t s; } mg = { uint16_t(unsigned(s)) };
+  return Value(mg.s);
+}*/
+
+
+enum Score : int { SCORE_ZERO };
+
+constexpr Score make_score(int mg, int eg) {
+  return Score((int)((unsigned int)eg << 16) + mg);
+}
+
+enum Phase {
+  PHASE_ENDGAME,
+  PHASE_MIDGAME = 128,
+  MG = 0, EG = 1, PHASE_NB = 2
+};
+
+enum ScaleFactor {
+  SCALE_FACTOR_DRAW    = 0,
+  SCALE_FACTOR_NORMAL  = 64,
+  SCALE_FACTOR_MAX     = 128,
+  SCALE_FACTOR_NONE    = 255
+};
+
+
+#define ENABLE_BASE_OPERATORS_ON(T)                                \
+constexpr T operator+(T d1, T d2) { return T(int(d1) + int(d2)); } \
+constexpr T operator-(T d1, T d2) { return T(int(d1) - int(d2)); } \
+constexpr T operator-(T d) { return T(-int(d)); }                  \
+inline T& operator+=(T& d1, T d2) { return d1 = d1 + d2; }         \
+inline T& operator-=(T& d1, T d2) { return d1 = d1 - d2; }
+
+#define ENABLE_INCR_OPERATORS_ON(T)                                \
+inline T& operator++(T& d) { return d = T(int(d) + 1); }           \
+inline T& operator--(T& d) { return d = T(int(d) - 1); }
+
+#define ENABLE_FULL_OPERATORS_ON(T)                                \
+ENABLE_BASE_OPERATORS_ON(T)                                        \
+constexpr T operator*(int i, T d) { return T(i * int(d)); }        \
+constexpr T operator*(T d, int i) { return T(int(d) * i); }        \
+constexpr T operator/(T d, int i) { return T(int(d) / i); }        \
+constexpr int operator/(T d1, T d2) { return int(d1) / int(d2); }  \
+inline T& operator*=(T& d, int i) { return d = T(int(d) * i); }    \
+inline T& operator/=(T& d, int i) { return d = T(int(d) / i); }
+
+ENABLE_BASE_OPERATORS_ON(Stockfish::Value)
+ENABLE_BASE_OPERATORS_ON(Stockfish::ScaleFactor)
+ENABLE_BASE_OPERATORS_ON(Stockfish::Score)
+ENABLE_BASE_OPERATORS_ON(Stockfish::Phase)
+
+inline Value eg_value(Score s) {
+    union Converter { 
+        uint16_t u; 
+        int16_t s; 
+    };
+    Converter eg;
+    eg.u = static_cast<uint16_t>((static_cast<uint32_t>(s) + 0x8000) >> 16);
+    return Value(eg.s);
+}
+
+inline Value mg_value(Score s) {
+    union Converter { 
+        uint16_t u; 
+        int16_t s; 
+    };
+    Converter mg;
+    mg.u = static_cast<uint16_t>(static_cast<unsigned>(s));
+    return Value(mg.s);
+}
+
+
+/// Only declared but not defined. We don't want to multiply two scores due to
+/// a very high risk of overflow. So user should explicitly convert to integer.
+Score operator*(Score, Score) = delete;
+
+/// Division of a Score must be handled separately for each term
+inline Score operator/(Score s, int i) {
+  return make_score(mg_value(s) / i, eg_value(s) / i);
+}
+
+/// Multiplication of a Score by an integer. We check for overflow in debug mode.
+inline Score operator*(Score s, int i) {
+
+  Score result = Score(int(s) * i);
+
+  assert(eg_value(result) == (i * eg_value(s)));
+  assert(mg_value(result) == (i * mg_value(s)));
+  assert((i == 0) || (result / i) == s);
+
+  return result;
+}
+
+/// Multiplication of a Score by a boolean
+inline Score operator*(Score s, bool b) {
+  return Score(int(s) * int(b));
+}
 
 
 // clang-format off
@@ -195,6 +325,15 @@ enum Piece {
     B_PAWN = PAWN + 8, B_KNIGHT, B_BISHOP, B_ROOK, B_QUEEN, B_KING,
     PIECE_NB = 16
 };
+
+
+constexpr Value PawnValue   = Stockfish::Value(208);
+constexpr Value KnightValue = Stockfish::Value(781);
+constexpr Value BishopValue = Stockfish::Value(825);
+constexpr Value RookValue   = Stockfish::Value(1276);
+constexpr Value QueenValue  = Stockfish::Value(2538);
+
+
 // clang-format on
 
 constexpr Value PieceValue[PIECE_NB] = {
@@ -274,6 +413,11 @@ enum Rank : int {
     RANK_NB
 };
 
+// ENABLE_BASE_OPERATORS_ON(Stockfish::Direction)
+// ENABLE_BASE_OPERATORS_ON(Stockfish::File)
+// ENABLE_BASE_OPERATORS_ON(Stockfish::Rank)
+ENABLE_FULL_OPERATORS_ON(Stockfish::Direction)
+
 // Keep track of what a move changes on the board (used by NNUE)
 struct DirtyPiece {
 
@@ -301,8 +445,8 @@ ENABLE_INCR_OPERATORS_ON(Rank)
 
     #undef ENABLE_INCR_OPERATORS_ON
 
-constexpr Direction operator+(Direction d1, Direction d2) { return Direction(int(d1) + int(d2)); }
-constexpr Direction operator*(int i, Direction d) { return Direction(i * int(d)); }
+// constexpr Direction operator+(Direction d1, Direction d2) { return Direction(int(d1) + int(d2)); }
+// constexpr Direction operator*(int i, Direction d) { return Direction(i * int(d)); }
 
 // Additional operators to add a Direction to a Square
 constexpr Square operator+(Square s, Direction d) { return Square(int(s) + int(d)); }
@@ -326,9 +470,9 @@ constexpr CastlingRights operator&(Color c, CastlingRights cr) {
     return CastlingRights((c == WHITE ? WHITE_CASTLING : BLACK_CASTLING) & cr);
 }
 
-constexpr Value mate_in(int ply) { return VALUE_MATE - ply; }
+// constexpr Value mate_in(int ply) { return VALUE_MATE - ply; }
 
-constexpr Value mated_in(int ply) { return -VALUE_MATE + ply; }
+// constexpr Value mated_in(int ply) { return -VALUE_MATE + ply; }
 
 constexpr Square make_square(File f, Rank r) { return Square((r << 3) + f); }
 

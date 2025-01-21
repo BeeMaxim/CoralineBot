@@ -93,6 +93,7 @@ class Position {
 
     // Position representation
     Bitboard pieces(PieceType pt = ALL_PIECES) const;
+    Bitboard pieces(PieceType pt1, PieceType pt2) const;
     template<typename... PieceTypes>
     Bitboard pieces(PieceType pt, PieceTypes... pts) const;
     Bitboard pieces(Color c) const;
@@ -107,6 +108,9 @@ class Position {
     int count() const;
     template<PieceType Pt>
     Square square(Color c) const;
+    bool is_on_semiopen_file(Color c, Square s) const;
+    int  pawns_on_same_color_squares(Color c, Square s) const;
+    template<PieceType Pt> const Square* squares(Color c) const;
 
     // Castling
     CastlingRights castling_rights(Color c) const;
@@ -123,10 +127,14 @@ class Position {
     // Attacks to/from a given square
     Bitboard attackers_to(Square s) const;
     Bitboard attackers_to(Square s, Bitboard occupied) const;
+    Bitboard attacks_from(PieceType pt, Square s) const;
+    template<PieceType> Bitboard attacks_from(Square s) const;
+    template<PieceType> Bitboard attacks_from(Square s, Color c) const;
     bool     attackers_to_exist(Square s, Bitboard occupied, Color c) const;
     void     update_slider_blockers(Color c) const;
     template<PieceType Pt>
     Bitboard attacks_by(Color c) const;
+    Bitboard slider_blockers(Bitboard sliders, Square s, Bitboard& pinners) const;
 
     // Properties of moves
     bool  legal(Move m) const;
@@ -204,6 +212,10 @@ class Position {
     bool       chess960;
 };
 
+inline Bitboard Position::pieces(PieceType pt1, PieceType pt2) const {
+  return byTypeBB[pt1] | byTypeBB[pt2];
+}
+
 std::ostream& operator<<(std::ostream& os, const Position& pos);
 
 inline Color Position::side_to_move() const { return sideToMove; }
@@ -211,6 +223,10 @@ inline Color Position::side_to_move() const { return sideToMove; }
 inline Piece Position::piece_on(Square s) const {
     assert(is_ok(s));
     return board[s];
+}
+
+inline bool Position::is_on_semiopen_file(Color c, Square s) const {
+  return !(pieces(c, PAWN) & file_bb(s));
 }
 
 inline bool Position::empty(Square s) const { return piece_on(s) == NO_PIECE; }
@@ -222,6 +238,10 @@ inline Bitboard Position::pieces(PieceType pt) const { return byTypeBB[pt]; }
 template<typename... PieceTypes>
 inline Bitboard Position::pieces(PieceType pt, PieceTypes... pts) const {
     return pieces(pt) | pieces(pts...);
+}
+
+inline int Position::pawns_on_same_color_squares(Color c, Square s) const {
+  return popcount(pieces(c, PAWN) & ((DarkSquares & s) ? DarkSquares : ~DarkSquares));
 }
 
 inline Bitboard Position::pieces(Color c) const { return byColorBB[c]; }
@@ -245,6 +265,25 @@ template<PieceType Pt>
 inline Square Position::square(Color c) const {
     assert(count<Pt>(c) == 1);
     return lsb(pieces(c, Pt));
+}
+
+
+template<PieceType Pt>
+inline Bitboard Position::attacks_from(Square s) const {
+  static_assert(Pt != PAWN, "Pawn attacks need color");
+
+  return  Pt == BISHOP || Pt == ROOK ? attacks_bb<Pt>(s, byTypeBB[ALL_PIECES])
+        : Pt == QUEEN  ? attacks_from<ROOK>(s) | attacks_from<BISHOP>(s)
+        : PseudoAttacks[Pt][s];
+}
+
+template<>
+inline Bitboard Position::attacks_from<PAWN>(Square s, Color c) const {
+  return PawnAttacks[c][s];
+}
+
+inline Bitboard Position::attacks_from(PieceType pt, Square s) const {
+  return attacks_bb(pt, s, byTypeBB[ALL_PIECES]);
 }
 
 inline Square Position::ep_square() const { return st->epSquare; }

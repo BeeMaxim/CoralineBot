@@ -19,6 +19,12 @@ extern TranspositionTable tt;
 
 int COUNT = 0;
 
+namespace Utility {
+/// Clamp a value between lo and hi. Available in c++17.
+    template<class T> constexpr const T& clamp(const T& v, const T& lo, const T& hi) {
+        return v < lo ? lo : v > hi ? hi : v;
+    }
+}
 
 const int COLOR_NB = 2; // Number of sides
 const int SQUARE_NB = 64; // Number of squares
@@ -150,19 +156,51 @@ Stockfish::Move to_move(const Stockfish::Position& pos, std::string str) {
 
 int marker(Stockfish::Position& position) {
     ++COUNT;
+    /*
+    Stockfish::Value npm_w = position.non_pawn_material(Stockfish::WHITE);
+    Stockfish::Value npm_b = position.non_pawn_material(Stockfish::BLACK);
+    Stockfish::Value npm   = Utility::clamp(npm_w + npm_b, Stockfish::Value::EndgameLimit, Stockfish::Value::MidgameLimit);
+
+  // Map total non-pawn material into [PHASE_ENDGAME, PHASE_MIDGAME]
+    Stockfish::Phase gamePhase = Stockfish::Phase(((npm - Stockfish::Value::EndgameLimit) * Stockfish::Phase::PHASE_MIDGAME) / 
+                (Stockfish::Value::MidgameLimit - Stockfish::Value::EndgameLimit));*/
     // 535
     // int material = 300 * position.count<Stockfish::PAWN>() + position.non_pawn_material();
-    auto color = position.side_to_move();
+    auto color = position.side_to_move(); 
     int material = 300 * (position.count<Stockfish::PAWN>(color) - position.count<Stockfish::PAWN>(Stockfish::Color(1 - color)));
+    // material = npm_w - npm_b;
+    // std::cerr << npm_w << ' '<< npm_b << '\n';
     material += position.non_pawn_material(color) - position.non_pawn_material(Stockfish::Color(1 - color));
 
     int mobility = evaluate_mobility<Stockfish::WHITE>(position) - evaluate_mobility<Stockfish::BLACK>(position);
+
+    Stockfish::Score score = Stockfish::SCORE_ZERO;
+    /*
+    score +=  pieces<Stockfish::WHITE, Stockfish::KNIGHT>(position) - pieces<Stockfish::BLACK, Stockfish::KNIGHT>(position)
+            + pieces<Stockfish::WHITE, Stockfish::BISHOP>(position) - pieces<Stockfish::BLACK, Stockfish::BISHOP>(position)
+            + pieces<Stockfish::WHITE, Stockfish::ROOK  >(position) - pieces<Stockfish::BLACK, Stockfish::ROOK  >(position)
+            + pieces<Stockfish::WHITE, Stockfish::QUEEN >(position) - pieces<Stockfish::BLACK, Stockfish::QUEEN >(position);*/
+
+    // Stockfish::ScaleFactor sf = scale_factor(Stockfish::eg_value(score));
+    /*
+    Stockfish::ScaleFactor sf = Stockfish::ScaleFactor::SCALE_FACTOR_NORMAL;
+    Stockfish::Value v = Stockfish::mg_value(score) ; // * int(gamePhase)
+       + eg_value(score) * int(Stockfish::Phase::PHASE_MIDGAME - gamePhase) * sf / Stockfish::ScaleFactor::SCALE_FACTOR_NORMAL;*/
+
+    // v /= Stockfish::Phase::PHASE_MIDGAME;
+    // v = Stockfish::Value((int)v / (int)Stockfish::Phase::PHASE_MIDGAME);
+
+    // std::cerr << mobility << '\n';
+
+    // v = mg_value(score);
     
     if (position.side_to_move() == Stockfish::BLACK) mobility *= -1;
 
-    int score = material + mobility;
+    // int score = material + mobility;
 
-    return score;
+    // if (position.side_to_move() == Stockfish::BLACK) v = -v;
+
+    return material + mobility;
 }
 
 int captures_search(Stockfish::Position& position, int alpha, int beta) {
@@ -198,7 +236,7 @@ template<typename T>
 T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, int global_ply, bool is_null_move=false) {
     if (STOP) {
         if constexpr (std::is_integral_v<T>) return 0;
-        else return Stockfish::Move();
+        else return T();
     }
 
     if constexpr (std::is_integral_v<T>) {
@@ -225,14 +263,16 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
             }
         }
     }
-    /**
-    if (!is_null_move && ply >= 4 && !position.checkers()) {
+    /*
+    if (!is_null_move && ply >= 4 && deep > 1 && !position.checkers()) {
         int R = 3 + deep / 6; // Reduction factor (adaptive based on depth)
+        
         Stockfish::StateInfo null_st;
-        std::cerr << "before " << position.checkers() << '\n';
+
         position.do_null_move(null_st);
+
         int null_score = -search<int>(position, deep - 1 - R, -beta, -beta + 1, ply + 1, global_ply + 1, true);
-        std::cerr << "after " << position.checkers() << '\n';
+
         position.undo_null_move();
 
         if (null_score >= beta) {
@@ -320,7 +360,6 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
     } 
     else {
         std::cerr << "SCORE: " << score << '\n';
-        std::cerr << move_to_str(final_move) << " ???\n";
         return final_move;
     }
 };

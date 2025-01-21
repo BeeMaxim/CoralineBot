@@ -1028,7 +1028,7 @@ void Position::do_null_move(StateInfo& newSt) {
     assert(!checkers());
     assert(&newSt != st);
 
-    std::memcpy(&newSt, st, offsetof(StateInfo, key));
+    std::memcpy(&newSt, st, offsetof(StateInfo, repetition));
 
     newSt.previous = st;
     st->next       = &newSt;
@@ -1139,7 +1139,7 @@ bool Position::see_ge(Move m, int threshold) const {
         // the bitboard 'attackers' any X-ray attackers behind it.
         if ((bb = stmAttackers & pieces(PAWN)))
         {
-            if ((swap = PawnValue - swap) < res)
+            if ((swap = PawnValueMg - swap) < res)
                 break;
             occupied ^= least_significant_square_bb(bb);
 
@@ -1148,14 +1148,14 @@ bool Position::see_ge(Move m, int threshold) const {
 
         else if ((bb = stmAttackers & pieces(KNIGHT)))
         {
-            if ((swap = KnightValue - swap) < res)
+            if ((swap = KnightValueMg - swap) < res)
                 break;
             occupied ^= least_significant_square_bb(bb);
         }
 
         else if ((bb = stmAttackers & pieces(BISHOP)))
         {
-            if ((swap = BishopValue - swap) < res)
+            if ((swap = BishopValueMg - swap) < res)
                 break;
             occupied ^= least_significant_square_bb(bb);
 
@@ -1164,7 +1164,7 @@ bool Position::see_ge(Move m, int threshold) const {
 
         else if ((bb = stmAttackers & pieces(ROOK)))
         {
-            if ((swap = RookValue - swap) < res)
+            if ((swap = RookValueMg - swap) < res)
                 break;
             occupied ^= least_significant_square_bb(bb);
 
@@ -1173,7 +1173,7 @@ bool Position::see_ge(Move m, int threshold) const {
 
         else if ((bb = stmAttackers & pieces(QUEEN)))
         {
-            if ((swap = QueenValue - swap) < res)
+            if ((swap = QueenValueMg - swap) < res)
                 break;
             occupied ^= least_significant_square_bb(bb);
 
@@ -1298,6 +1298,39 @@ void Position::flip() {
     set(f, is_chess960(), st);
 
     assert(pos_is_ok());
+}
+
+
+/// Position::slider_blockers() returns a bitboard of all the pieces (both colors)
+/// that are blocking attacks on the square 's' from 'sliders'. A piece blocks a
+/// slider if removing that piece from the board would result in a position where
+/// square 's' is attacked. For example, a king-attack blocking piece can be either
+/// a pinned or a discovered check piece, according if its color is the opposite
+/// or the same of the color of the slider.
+
+Bitboard Position::slider_blockers(Bitboard sliders, Square s, Bitboard& pinners) const {
+
+  Bitboard blockers = 0;
+  pinners = 0;
+
+  // Snipers are sliders that attack 's' when a piece and other snipers are removed
+  Bitboard snipers = (  (PseudoAttacks[  ROOK][s] & pieces(QUEEN, ROOK))
+                      | (PseudoAttacks[BISHOP][s] & pieces(QUEEN, BISHOP))) & sliders;
+  Bitboard occupancy = pieces() ^ snipers;
+
+  while (snipers)
+  {
+    Square sniperSq = pop_lsb(snipers);
+    Bitboard b = between_bb(s, sniperSq) & occupancy;
+
+    if (b && !more_than_one(b))
+    {
+        blockers |= b;
+        if (b & pieces(color_of(piece_on(s))))
+            pinners |= sniperSq;
+    }
+  }
+  return blockers;
 }
 
 
