@@ -356,15 +356,12 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
         }
     }
     if (final_move != Stockfish::Move::none()) {
-        __asm {
-            nop // Пустая ассемблерная инструкция
-        }
         // ++COUNT;
         Bound bound = (score >= beta) ? BOUND_LOWER :
               (score <= alpha) ? BOUND_UPPER : BOUND_EXACT;
         tt.save(position.key(), score, bound, deep, final_move);
     }
-    // else if (final_move != Stockfish::Move::none());
+    else if (final_move != Stockfish::Move::none());
 
     if constexpr (std::is_integral_v<T>) {
         if (final_move == Stockfish::Move::none()) {
