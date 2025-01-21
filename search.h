@@ -205,8 +205,18 @@ int marker(Stockfish::Position& position) {
 
 int captures_search(Stockfish::Position& position, int alpha, int beta) {
 	if (STOP) return 0;
-	int score = marker(position);
+    int score = marker(position);
 	alpha = max(alpha, score);
+    
+    auto tt_move_ptr = tt.probe(position.key());
+    if (tt_move_ptr != nullptr) {
+        int value = tt_move_ptr->value;
+        if ((tt_move_ptr->bound == BOUND_EXACT ||
+            (tt_move_ptr->bound == BOUND_LOWER && value >= beta) ||
+            (tt_move_ptr->bound == BOUND_UPPER && value <= alpha))) {
+                return value;
+        }
+    }
 
     Stockfish::MovePicker mp(position, Stockfish::Move::none(), 0, mainHistory, continuationHistory[0], captureHistory);
     Stockfish::StateInfo new_st;
@@ -263,7 +273,7 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
             }
         }
     }
-    /*
+    
     if (!is_null_move && ply >= 4 && deep > 1 && !position.checkers()) {
         int R = 3 + deep / 6; // Reduction factor (adaptive based on depth)
         
@@ -280,7 +290,7 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
                 return null_score; // Beta cutoff
             }
         }
-    }*/
+    }
 
     Stockfish::MovePicker mp(position, tt_move, deep, mainHistory, continuationHistory[0], captureHistory);
     Stockfish::StateInfo killer;
@@ -345,11 +355,16 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
             }
         }
     }
-    if (final_move != Stockfish::Move::none() && (tt_move_ptr == nullptr || tt_move_ptr->depth < deep)) {
+    if (final_move != Stockfish::Move::none()) {
+        __asm {
+            nop // Пустая ассемблерная инструкция
+        }
+        // ++COUNT;
         Bound bound = (score >= beta) ? BOUND_LOWER :
               (score <= alpha) ? BOUND_UPPER : BOUND_EXACT;
         tt.save(position.key(), score, bound, deep, final_move);
     }
+    // else if (final_move != Stockfish::Move::none());
 
     if constexpr (std::is_integral_v<T>) {
         if (final_move == Stockfish::Move::none()) {
@@ -373,7 +388,7 @@ Stockfish::Move stockfish_test(Stockfish::Position& position) {
     initialize_history();
 	Stockfish::Move move;
 
-	for (int deep = 1; deep < 8; ++deep) {
+	for (int deep = 1; deep < 9; ++deep) {
 		cout << "------------------------DEEP: " << deep << "-----------------------------\n";
 		int alpha = -1e9 - 1000, beta = 1e9 + 1000;
 
