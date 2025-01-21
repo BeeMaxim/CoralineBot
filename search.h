@@ -259,6 +259,8 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
         }
     }
 
+    if (position.checkers() && ply < 12) ++deep;
+
     Stockfish::Move tt_move = Stockfish::Move::none();
     auto tt_move_ptr = tt.probe(position.key());
     if (tt_move_ptr != nullptr) {
