@@ -401,6 +401,8 @@ enum File : int {
     FILE_NB
 };
 
+ENABLE_BASE_OPERATORS_ON(Stockfish::File)
+
 enum Rank : int {
     RANK_1,
     RANK_2,

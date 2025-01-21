@@ -135,7 +135,7 @@ void MovePicker::score() {
             //m.value = 0;
             int p = m.value;
 
-            // m.value += (continuationHistory)[pc][to] / 4;
+            /// m.value += (continuationHistory)[pc][to];
             // std::cerr << "!!! " << m.value - p << '\n';
             /*
             m.value += (continuationHistory[0])[pc][to];

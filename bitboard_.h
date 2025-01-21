@@ -374,6 +374,11 @@ inline Square pop_lsb(Bitboard& b) {
     return s;
 }
 
+
+inline Bitboard adjacent_files_bb(File f) {
+    return (f > FILE_A ? file_bb(File(f - 1)) : 0) | (f < FILE_H ? file_bb(File(f + 1)) : 0);
+}
+
 }  // namespace Stockfish
 
 #endif  // #ifndef BITBOARD_H_INCLUDED
