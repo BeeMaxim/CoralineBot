@@ -425,7 +425,7 @@ Stockfish::Move stockfish_test(Stockfish::Position& position) {
     initialize_history();
 	Stockfish::Move move;
 
-	for (int deep = 1; deep < 10; ++deep) {
+	for (int deep = 1; deep < 11; ++deep) {
 		cout << "------------------------DEEP: " << deep << "-----------------------------\n";
 		int alpha = -1e9 - 1000, beta = 1e9 + 1000;
 
