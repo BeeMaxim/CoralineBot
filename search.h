@@ -47,7 +47,7 @@ void update_continuation_histories(Stockfish::Piece pc, Stockfish::Square to, in
     static constexpr std::array<std::pair<int, int>, 6> conthist_bonuses = {
       {{1, 1025}, {2, 621}, {3, 325}, {4, 512}, {5, 122}, {6, 534}}};
 
-    continuationHistory[0][pc][to] += bonus;
+    continuationHistory[ply][pc][to] += bonus;
 
     for (const auto [i, weight] : conthist_bonuses)
     {
@@ -106,6 +106,13 @@ void initialize_history() {
     for (int i = 0; i < COLOR_NB; ++i) {
         for (int j = 0; j < SQUARE_NB * SQUARE_NB; ++j) {
             mainHistory[i][j] = 0;
+        }
+    }
+    for (int i = 0; i < 300; ++i) {
+        for (int j = 0; j < PIECE_NB; ++j) {
+            for (int k = 0; k < SQUARE_NB; ++k) {
+                continuationHistory[i][j][k] = 0;
+            }
         }
     }
     //memset(continuationHistory, 0, sizeof(continuationHistory));
@@ -167,7 +174,7 @@ int marker(Stockfish::Position& position) {
     // 535
     // int material = 300 * position.count<Stockfish::PAWN>() + position.non_pawn_material();
     auto color = position.side_to_move(); 
-    int material = 300 * (position.count<Stockfish::PAWN>(color) - position.count<Stockfish::PAWN>(Stockfish::Color(1 - color)));
+    int material = 208 * (position.count<Stockfish::PAWN>(color) - position.count<Stockfish::PAWN>(Stockfish::Color(1 - color)));
     // material = npm_w - npm_b;
     // std::cerr << npm_w << ' '<< npm_b << '\n';
     material += position.non_pawn_material(color) - position.non_pawn_material(Stockfish::Color(1 - color));
@@ -217,8 +224,8 @@ int marker(Stockfish::Position& position) {
 
     int strategy = mobility + pawn_penalty + center_control;
 
-    if (position.can_castle(Stockfish::WHITE_OO)) strategy += 20;
-    if (position.can_castle(Stockfish::BLACK_OO)) strategy -= 20;
+    if (!position.can_castle(Stockfish::WHITE_OO) && !position.castling_impeded(Stockfish::WHITE_OO)) strategy -= 20;
+    if (!position.can_castle(Stockfish::BLACK_OO) && !position.castling_impeded(Stockfish::BLACK_OO)) strategy += 20;
     
     if (position.side_to_move() == Stockfish::BLACK) strategy *= -1;
 
@@ -291,6 +298,11 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
     auto tt_move_ptr = tt.probe(position.key());
     if (tt_move_ptr != nullptr) {
         tt_move = tt_move_ptr->move;
+    }
+    
+    if (tt_move_ptr != nullptr) {
+        // std::cerr << "ha";
+        tt_move = tt_move_ptr->move;
         if constexpr (std::is_integral_v<T>) {
             int value = tt_move_ptr->value;
             if (tt_move_ptr->depth >= deep &&
@@ -304,7 +316,7 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
 
     // int static_eval = marker(position);
     /*
-    if (!is_null_move && ply >= 0 && deep >= 3 && !position.checkers() &&
+    if (!is_null_move && ply >= 1 && deep >= 3 && !position.checkers() &&
      position.non_pawn_material() > 2 * Stockfish::PieceValue[Stockfish::ROOK]) {
         int R = 3 + deep / 6; // Reduction factor (adaptive based on depth)
         
@@ -323,7 +335,7 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
         }
     }*/
 
-    Stockfish::MovePicker mp(position, tt_move, deep, mainHistory, continuationHistory[0], captureHistory);
+    Stockfish::MovePicker mp(position, tt_move, deep, mainHistory, continuationHistory[ply], captureHistory);
     Stockfish::StateInfo killer;
     Stockfish::StateInfo new_st;
 
@@ -351,6 +363,7 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
     }*/
 
     move = Stockfish::Move::none();
+    bool was_null = false;
 
     while ((move = mp.next_move()) != Stockfish::Move::none()) {
 
@@ -358,9 +371,30 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
             continue;
         }
 
+        if (!was_null && !is_null_move && ply >= 1 && deep >= 3 && !position.checkers() &&
+        position.non_pawn_material() > 2 * Stockfish::PieceValue[Stockfish::ROOK]) {
+            int R = 3 + deep / 6; // Reduction factor (adaptive based on depth)
+            
+            Stockfish::StateInfo null_st;
+
+            position.do_null_move(null_st);
+
+            int null_score = -search<int>(position, deep - 1 - R, -beta, -beta + 1, ply + 1, global_ply + 1, true);
+
+            position.undo_null_move();
+
+            if (null_score >= beta) {
+                if constexpr (std::is_integral_v<T>) {
+                    return null_score; // Beta cutoff
+                }
+            }
+
+            was_null = true;
+        }
+
         position.do_move(move, new_st);
 
-        int cur_score = -search<int>(position, deep - 1, -beta, -alpha, ply + 1, global_ply + 1, is_null_move);
+        int cur_score = -search<int>(position, deep - 1, -beta, -alpha, ply + 1, global_ply + 1, false);
 
         position.undo_move(move);
 
@@ -374,9 +408,8 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
                     update_stats(position, move, stat_bonus(deep), global_ply);
                 }
             }
+            
             if (alpha >= beta) {
-                killer_moves[ply][1] = killer_moves[ply][0];
-                killer_moves[ply][0] = move;
                 if (!position.capture(move)) {
                     update_stats(position, move, stat_bonus(deep), global_ply);
                 } else {
@@ -386,10 +419,9 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
             }
         }
     }
-    if (final_move != Stockfish::Move::none()) {
-        std::cerr << "";
-        Bound bound = (score >= beta) ? BOUND_LOWER :
+    Bound bound = (score >= beta) ? BOUND_LOWER :
               (score <= alpha) ? BOUND_UPPER : BOUND_EXACT;
+    if (tt_move_ptr == nullptr || tt_move_ptr->depth < deep) {
         tt.save(position.key(), score, bound, deep, final_move);
     }
 
@@ -401,7 +433,7 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
         return score;
     } 
     else {
-        std::cerr << "SCORE: " << score << '\n';
+        std::cerr << "SCORE: " << score << ' ' << move_to_str(final_move) << ' ' << COUNT << '\n';
         return final_move;
     }
 };
@@ -434,6 +466,7 @@ Stockfish::Move stockfish_test(Stockfish::Position& position) {
 	}
 	STOP = false;
     std::cout << COUNT << '\n';
+    // while (1) {}
 
 	return move;
 }

@@ -132,10 +132,11 @@ void MovePicker::score() {
             Square    to   = m.to_sq();
 
             m.value = 2 * (mainHistory)[pos.side_to_move()][m.from_to()];
-            //m.value = 0;
+            // m.value = 0;
             int p = m.value;
 
-            /// m.value += (continuationHistory)[pc][to];
+
+            // m.value += (continuationHistory)[pc][to];
             // std::cerr << "!!! " << m.value - p << '\n';
             /*
             m.value += (continuationHistory[0])[pc][to];
