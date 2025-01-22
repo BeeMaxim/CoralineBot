@@ -224,8 +224,8 @@ int marker(Stockfish::Position& position) {
 
     int strategy = mobility + pawn_penalty + center_control;
 
-    if (!position.can_castle(Stockfish::WHITE_OO) && !position.castling_impeded(Stockfish::WHITE_OO)) strategy -= 20;
-    if (!position.can_castle(Stockfish::BLACK_OO) && !position.castling_impeded(Stockfish::BLACK_OO)) strategy += 20;
+    // if (!position.can_castle(Stockfish::WHITE_OO) && !position.castling_impeded(Stockfish::WHITE_OO)) strategy -= 20;
+    // if (!position.can_castle(Stockfish::BLACK_OO) && !position.castling_impeded(Stockfish::BLACK_OO)) strategy += 20;
     
     if (position.side_to_move() == Stockfish::BLACK) strategy *= -1;
 
@@ -315,7 +315,7 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
     }
 
     // int static_eval = marker(position);
-    /*
+    
     if (!is_null_move && ply >= 1 && deep >= 3 && !position.checkers() &&
      position.non_pawn_material() > 2 * Stockfish::PieceValue[Stockfish::ROOK]) {
         int R = 3 + deep / 6; // Reduction factor (adaptive based on depth)
@@ -333,7 +333,7 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
                 return null_score; // Beta cutoff
             }
         }
-    }*/
+    }
 
     Stockfish::MovePicker mp(position, tt_move, deep, mainHistory, continuationHistory[ply], captureHistory);
     Stockfish::StateInfo killer;
@@ -341,29 +341,11 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
 
     int score = -1e9 - deep;
     Stockfish::Move move, final_move = Stockfish::Move::none();
-    /*
-    if constexpr (std::is_integral_v<T>) {
-        for (int i = 0; i < 2; ++i) {
-            Stockfish::Move killer_move = killer_moves[ply][i];
-            if (killer_move != Stockfish::Move::none() && position.legal(killer_move)) {
-                position.do_move(killer_move, killer);
-                int cur = -search<int>(position, deep - 1, -beta, -alpha, ply + 1);
-                position.undo_move(killer_move);
-
-                if (cur > score) {
-                    score = cur;
-                    alpha = score;
-                    if (alpha >= beta) {
-                        killer_moves[ply][i] = killer_move;
-                        return score;
-                    }
-                }
-            }
-        }
-    }*/
+    
 
     move = Stockfish::Move::none();
-    bool was_null = false;
+    int quiet_move_count = 0;
+    bool was_killer = false;
 
     while ((move = mp.next_move()) != Stockfish::Move::none()) {
 
@@ -371,25 +353,19 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
             continue;
         }
 
-        if (!was_null && !is_null_move && ply >= 1 && deep >= 3 && !position.checkers() &&
-        position.non_pawn_material() > 2 * Stockfish::PieceValue[Stockfish::ROOK]) {
-            int R = 3 + deep / 6; // Reduction factor (adaptive based on depth)
-            
-            Stockfish::StateInfo null_st;
+        int reduction = 0;
+        if (deep >= 3 && !position.capture(move) && !position.gives_check(move)) {
+            ++quiet_move_count;
+            if (quiet_move_count > 4) {
+                reduction = 1 + std::log2(deep) * std::log2(quiet_move_count) / 4;
+                reduction = std::min(reduction, deep);
 
-            position.do_null_move(null_st);
+                position.do_move(move, new_st);
+                int value = -search<int>(position, deep - reduction, -alpha - 1, -alpha, ply + 1, global_ply + 1, false); 
+                position.undo_move(move);
 
-            int null_score = -search<int>(position, deep - 1 - R, -beta, -beta + 1, ply + 1, global_ply + 1, true);
-
-            position.undo_null_move();
-
-            if (null_score >= beta) {
-                if constexpr (std::is_integral_v<T>) {
-                    return null_score; // Beta cutoff
-                }
+                if (value <= alpha) continue;
             }
-
-            was_null = true;
         }
 
         position.do_move(move, new_st);
@@ -411,6 +387,8 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
             
             if (alpha >= beta) {
                 if (!position.capture(move)) {
+                    killer_moves[global_ply][1] = killer_moves[global_ply][0];
+                    killer_moves[global_ply][0] = move;
                     update_stats(position, move, stat_bonus(deep), global_ply);
                 } else {
                     // update_capture_history(position, move, stat_bonus(deep));
@@ -447,7 +425,7 @@ Stockfish::Move stockfish_test(Stockfish::Position& position) {
     initialize_history();
 	Stockfish::Move move;
 
-	for (int deep = 1; deep < 9; ++deep) {
+	for (int deep = 1; deep < 10; ++deep) {
 		cout << "------------------------DEEP: " << deep << "-----------------------------\n";
 		int alpha = -1e9 - 1000, beta = 1e9 + 1000;
 
