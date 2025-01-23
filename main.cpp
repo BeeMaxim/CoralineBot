@@ -1226,7 +1226,7 @@ int main(int argc, char **argv) {
 				is_hard = false;
 			}
 			else {
-				TIME_LIMIT = 60000000;
+				TIME_LIMIT = 100000000;
 			}
 
 			auto my_m = stockfish_iterative(position, stop_time, ply, is_hard=is_hard);
