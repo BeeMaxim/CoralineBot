@@ -18,6 +18,8 @@ extern atomic<bool> STOP;
 extern TranspositionTable tt;
 
 int COUNT = 0;
+int64_t TIME_LIMIT = 0;
+std::chrono::time_point<std::chrono::high_resolution_clock> START_TIME;
 
 namespace Utility {
 /// Clamp a value between lo and hi. Available in c++17.
@@ -222,7 +224,9 @@ int marker(Stockfish::Position& position) {
     int center_control = Stockfish::popcount(Stockfish::pawn_attacks_bb<Stockfish::WHITE>(position.pieces(Stockfish::WHITE, Stockfish::PAWN)) & Center) * 10
                       - Stockfish::popcount(Stockfish::pawn_attacks_bb<Stockfish::BLACK>(position.pieces(Stockfish::BLACK, Stockfish::PAWN)) & Center) * 10;
 
-    int strategy = mobility + pawn_penalty + center_control;
+    int king_safety = evaluate_king_safety(position, Stockfish::WHITE) - evaluate_king_safety(position, Stockfish::BLACK);
+    
+    int strategy = mobility + pawn_penalty + center_control + king_safety;
 
     // if (!position.can_castle(Stockfish::WHITE_OO) && !position.castling_impeded(Stockfish::WHITE_OO)) strategy -= 20;
     // if (!position.can_castle(Stockfish::BLACK_OO) && !position.castling_impeded(Stockfish::BLACK_OO)) strategy += 20;
@@ -282,6 +286,17 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
         else return T();
     }
 
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        currentTime - START_TIME
+    ).count();
+    
+    if (elapsedMs >= TIME_LIMIT) {
+        STOP = true; // Устанавливаем флаг прерывания
+        if constexpr (std::is_integral_v<T>) return 0;
+        else return T();
+    }
+
     if constexpr (std::is_integral_v<T>) {
         if (position.is_draw(global_ply)) {
             return 0;
@@ -292,7 +307,7 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
         }
     }
 
-    // if (position.checkers() && ply < 12) ++deep;
+    if (position.checkers() && ply < 12) ++deep;
 
     Stockfish::Move tt_move = Stockfish::Move::none();
     auto tt_move_ptr = tt.probe(position.key());
@@ -421,7 +436,9 @@ Stockfish::Move stockfish_test(Stockfish::Position& position) {
     for (int i = 0; i < 100; ++i) killer_moves[i][0] = killer_moves[i][1] = Stockfish::Move::none();
     COUNT = 0;
 	STOP = false;
+    TIME_LIMIT = 1e18;
 	time_t start = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    START_TIME = std::chrono::high_resolution_clock::now();
     initialize_history();
 	Stockfish::Move move;
 
@@ -453,37 +470,17 @@ Stockfish::Move stockfish_test(Stockfish::Position& position) {
 Stockfish::Move stockfish_iterative(Stockfish::Position& position, time_t stop_time, int ply, bool is_hard=true) {
 	STOP = false;
     initialize_history();
-	time_t start = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+	// time_t start = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 	Stockfish::Move move;
-	
-	for (int32_t deep = 1; deep < 1000; ++deep) {
+    START_TIME = std::chrono::high_resolution_clock::now();
+
+	for (int32_t deep = 1; deep < 30; ++deep) {
 		int alpha = -1e9 - 1000, beta = 1e9 + 1000;
-        if (is_hard) {
-            std::future<Stockfish::Move> thread = std::async(search<Stockfish::Move>, std::ref(position), deep, alpha, beta, 0, ply, false);
+        
+        auto mb_move = search<Stockfish::Move>(position, deep, alpha, beta, 0, ply, false);
 
-            bool search = true;
-            while (thread.wait_for(std::chrono::seconds(0)) != std::future_status::ready) {
-                if ((std::chrono::high_resolution_clock::now().time_since_epoch().count() - start) >= stop_time) {
-                    search = false;
-                    break;
-                }
-            }
-
-            if (search) {
-                move = thread.get();
-            }
-            else {
-                STOP = true;
-                thread.get();
-                break;
-            }
-        }
-        else {
-            if (std::chrono::high_resolution_clock::now().time_since_epoch().count() - start >= stop_time / 2) {
-                break;
-            }
-            move = search<Stockfish::Move>(position, deep, alpha, beta, 0, ply, false);
-        }
+        if (!STOP) move = mb_move;
+        else break;
 
 		std::cerr << "base depth: " << deep << endl;
 	}

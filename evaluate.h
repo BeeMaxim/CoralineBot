@@ -102,6 +102,20 @@ int kingAttackersWeight[Stockfish::COLOR_NB];
 int kingAttacksCount[Stockfish::COLOR_NB];
 
 
+int game_phase(const Stockfish::Position& pos) {
+    // Веса фигур: Q=4, R=2, B/N=1, P=0
+    int phase = 4 * (pos.count<Stockfish::QUEEN>(Stockfish::WHITE) + pos.count<Stockfish::QUEEN>(Stockfish::BLACK))
+              + 2 * (pos.count<Stockfish::ROOK>(Stockfish::WHITE) + pos.count<Stockfish::ROOK>(Stockfish::BLACK))
+              + 1 * (pos.count<Stockfish::BISHOP>(Stockfish::WHITE) + pos.count<Stockfish::KNIGHT>(Stockfish::WHITE)
+                    + pos.count<Stockfish::BISHOP>(Stockfish::BLACK) + pos.count<Stockfish::KNIGHT>(Stockfish::BLACK));
+    return phase; // 0-24 (24 = начальная позиция)
+}
+
+bool is_endgame(const Stockfish::Position& pos) {
+    return game_phase(pos) < 6; // Эмпирический порог
+}
+
+
 template<Stockfish::Color Us>
 int evaluate_mobility(Stockfish::Position& pos) {
     int mobilityScore = 0;
@@ -130,7 +144,8 @@ int evaluate_mobility(Stockfish::Position& pos) {
             // int mob = Stockfish::popcount(attacks);
 
             // Добавляем бонус за мобильность
-            mobilityScore += Stockfish::mg_value(MobilityBonus[pt - 2][mob]);
+            if (!is_endgame(pos)) mobilityScore += Stockfish::mg_value(MobilityBonus[pt - 2][mob]);
+            else mobilityScore += Stockfish::eg_value(MobilityBonus[pt - 2][mob]);
 
             // Обновляем общие атакованные поля
             attackedBy[Us][pt] |= attacks;
@@ -139,4 +154,67 @@ int evaluate_mobility(Stockfish::Position& pos) {
     }
 
     return mobilityScore;
+}
+
+
+int evaluate_king_safety(const Stockfish::Position& pos, Stockfish::Color us) {
+    constexpr int AttackWeight[6] = {0, 0, 80, 50, 40, 10}; // Веса для P, N, B, R, Q
+    constexpr int KingDangerBase = 100;
+    
+    const Stockfish::Square ksq = pos.square<Stockfish::KING>(us);
+    const Stockfish::Color them = Stockfish::Color(1 - us);
+
+    // 1. Определение зоны короля
+    Stockfish::Bitboard kingZone = pos.attacks_from<Stockfish::KING>(ksq) | ksq;
+
+    // 2. Подсчет атакующих фигур
+    int attackersCount = 0;
+    int attackersWeight = 0;
+    int attacksCount = 0;
+
+    // Для всех типов атакующих фигур (кроме короля и пешек)
+    for (Stockfish::PieceType pt : {Stockfish::KNIGHT, Stockfish::BISHOP, Stockfish::ROOK, Stockfish::QUEEN}) {
+        Stockfish::Bitboard attackers = pos.pieces(them, pt);
+        while (attackers) {
+            Stockfish::Square s = Stockfish::pop_lsb(attackers);
+            Stockfish::Bitboard attacks = pos.attacks_from(pt, s) & kingZone;
+            
+            if (attacks) {
+                attackersCount++;
+                attackersWeight += AttackWeight[pt];
+                attacksCount += popcount(attacks);
+            }
+        }
+    }
+
+    // 3. Пешечное прикрытие
+    Stockfish::Bitboard pawnCover = pos.attacks_from<Stockfish::PAWN>(ksq, us) & pos.pieces(us, Stockfish::PAWN);
+    int pawnShield = popcount(pawnCover);
+
+    // 4. Угрозы от вражеских пешек
+    Stockfish::Bitboard enemyPawns = pos.pieces(them, Stockfish::PAWN);
+    int pawnThreats = Stockfish::popcount(enemyPawns & pos.attacks_from<Stockfish::KING>(ksq));
+
+    // 5. Структурные слабости
+    int weaknesses = 0;
+    Stockfish::File kf = file_of(ksq);
+    
+    // Изолированные пешки рядом с королем
+    if (!(pos.pieces(us, Stockfish::PAWN) & adjacent_files_bb(kf)))
+        weaknesses += 20;
+
+    // 6. Комбинированная оценка опасности
+    int danger = attackersWeight * 2
+               + attacksCount * 15
+               + pawnThreats * 40
+               + weaknesses
+               - pawnShield * 30
+               - KingDangerBase;
+
+    // Ограничение диапазона и возврат результата
+    danger = std::clamp(danger, -1000, 1000);
+    // std::cerr << danger << '\n';
+    if (!is_endgame(pos)) danger /= 4;
+
+    return -danger; // Чем выше значение, тем безопаснее король
 }

@@ -31,7 +31,7 @@ int TIMER = -1;
 
 
 // vector<vector<int>> mark_tables[10];
-TranspositionTable tt(15000);
+TranspositionTable tt(30000);
 
 
 string from_code(Move m) {
@@ -1216,17 +1216,17 @@ int main(int argc, char **argv) {
 
 			time_t stop_time;
 			if (time > 60) {
-				stop_time = 500000000;
+				TIME_LIMIT = 500000000;
 			}
 			else if (time > 25) {
-				stop_time = 300000000;
+				TIME_LIMIT = 300000000;
 			}
 			else if (time > 3) {
-				stop_time = 300000000;
+				TIME_LIMIT = 300000000;
 				is_hard = false;
 			}
 			else {
-				stop_time = 60000000;
+				TIME_LIMIT = 60000000;
 			}
 
 			auto my_m = stockfish_iterative(position, stop_time, ply, is_hard=is_hard);
