@@ -19,7 +19,7 @@ extern TranspositionTable tt;
 
 int COUNT = 0;
 int64_t TIME_LIMIT = 0;
-std::chrono::time_point<std::chrono::high_resolution_clock> START_TIME;
+int64_t START_TIME;
 
 namespace Utility {
 /// Clamp a value between lo and hi. Available in c++17.
@@ -286,11 +286,9 @@ T search(Stockfish::Position& position, int deep, int alpha, int beta, int ply, 
         else return T();
     }
 
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
-        currentTime - START_TIME
-    ).count();
-    
+    auto currentTime = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    auto elapsedMs = currentTime - START_TIME;
+
     if (elapsedMs >= TIME_LIMIT) {
         STOP = true; // Устанавливаем флаг прерывания
         if constexpr (std::is_integral_v<T>) return 0;
@@ -437,8 +435,9 @@ Stockfish::Move stockfish_test(Stockfish::Position& position) {
     COUNT = 0;
 	STOP = false;
     TIME_LIMIT = 1e18;
+    TIME_LIMIT = 1e9;
 	time_t start = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-    START_TIME = std::chrono::high_resolution_clock::now();
+    START_TIME = std::chrono::high_resolution_clock::now().time_since_epoch().count();
     initialize_history();
 	Stockfish::Move move;
 
@@ -472,7 +471,7 @@ Stockfish::Move stockfish_iterative(Stockfish::Position& position, time_t stop_t
     initialize_history();
 	// time_t start = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 	Stockfish::Move move;
-    START_TIME = std::chrono::high_resolution_clock::now();
+    START_TIME = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 
 	for (int32_t deep = 1; deep < 30; ++deep) {
 		int alpha = -1e9 - 1000, beta = 1e9 + 1000;
