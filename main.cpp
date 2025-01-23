@@ -31,7 +31,7 @@ int TIMER = -1;
 
 
 // vector<vector<int>> mark_tables[10];
-TranspositionTable tt(100000);
+TranspositionTable tt(150000);
 
 
 string from_code(Move m) {

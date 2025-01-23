@@ -16,10 +16,10 @@ enum Bound {
 // Структура для хранения данных в transposition table
 struct TTEntry {
     uint64_t key;      // Ключ позиции (часть Zobrist hash)
-    int depth;         // Глубина поиска
+    int8_t depth;         // Глубина поиска
     int value;         // Оценка позиции
-    Stockfish::Move move;      // Лучший ход (например, закодированный как short)
     Bound bound;       // Тип границы
+    Stockfish::Move move;      // Лучший ход (например, закодированный как short)
 };
 
 // Упрощённая transposition table
@@ -28,9 +28,9 @@ public:
     TranspositionTable(size_t size) : table(size) {}
 
     // Сохранение данных в таблицу
-    void save(uint64_t key, int value, Bound bound, int depth, Stockfish::Move move) {
+    void save(uint64_t key, int value, Bound bound, int8_t depth, Stockfish::Move move) {
         size_t index = key % table.size();
-        table[index] = {key, depth, value, move, bound};
+        table[index] = {key, depth, value, bound, move};
     }
 
     // Поиск данных в таблице

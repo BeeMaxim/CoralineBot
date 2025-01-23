@@ -435,7 +435,7 @@ Stockfish::Move stockfish_test(Stockfish::Position& position) {
     COUNT = 0;
 	STOP = false;
     TIME_LIMIT = 1e18;
-    TIME_LIMIT = 1e9;
+    // TIME_LIMIT = 1e9;
 	time_t start = std::chrono::high_resolution_clock::now().time_since_epoch().count();
     START_TIME = std::chrono::high_resolution_clock::now().time_since_epoch().count();
     initialize_history();
@@ -473,7 +473,7 @@ Stockfish::Move stockfish_iterative(Stockfish::Position& position, time_t stop_t
 	Stockfish::Move move;
     START_TIME = std::chrono::high_resolution_clock::now().time_since_epoch().count();
 
-	for (int32_t deep = 1; deep < 30; ++deep) {
+	for (int32_t deep = 1; deep < 20; ++deep) {
 		int alpha = -1e9 - 1000, beta = 1e9 + 1000;
         
         auto mb_move = search<Stockfish::Move>(position, deep, alpha, beta, 0, ply, false);
